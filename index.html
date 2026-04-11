@@ -6,170 +6,130 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         body { background: #121212; color: white; font-family: 'Segoe UI', sans-serif; text-align: center; margin: 0; overflow: hidden; }
-        .header { background: #1DB954; padding: 15px; font-size: 28px; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.3); text-transform: uppercase; letter-spacing: 2px; }
-        .controles-tv { margin: 20px; padding: 20px; border: 2px solid #1DB954; display: inline-block; border-radius: 20px; background: #1e1e1e; }
-        .tablero { display: flex; justify-content: center; gap: 15px; padding: 15px; flex-wrap: wrap; height: 55vh; overflow-y: auto; }
+        .header { background: #1DB954; padding: 15px; font-size: 28px; font-weight: bold; text-transform: uppercase; }
+        .controles-tv { margin: 15px; padding: 20px; border: 2px solid #1DB954; display: inline-block; border-radius: 20px; background: #1e1e1e; min-width: 400px; }
         
-        /* ESTILO DEL TURNO ACTIVO */
-        .jugador { border: 3px solid #333; padding: 10px; border-radius: 12px; background: #252525; min-width: 220px; transition: 0.4s; position: relative; }
-        .turno-activo { border-color: #FFD700 !important; box-shadow: 0 0 20px rgba(255, 215, 0, 0.6); transform: scale(1.05); z-index: 5; }
-        .indicador { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: #FFD700; color: black; font-weight: bold; font-size: 10px; padding: 2px 10px; border-radius: 10px; display: none; }
-        .turno-activo .indicador { display: block; }
-
+        /* AVISO DE TURNO GRANDE */
+        #aviso-turno { font-size: 32px; color: gold; font-weight: bold; margin-bottom: 10px; text-shadow: 0 0 10px rgba(255,215,0,0.4); }
+        
+        .tablero { display: flex; justify-content: center; gap: 15px; padding: 15px; flex-wrap: wrap; height: 50vh; overflow-y: auto; }
+        .jugador { border: 3px solid #333; padding: 10px; border-radius: 12px; background: #252525; min-width: 200px; transition: 0.4s; position: relative; }
+        .turno-activo { border-color: #FFD700 !important; box-shadow: 0 0 20px gold; transform: scale(1.05); }
         .linea { display: flex; gap: 5px; justify-content: center; margin-top: 8px; flex-wrap: wrap; }
-        .carta { background: #fff; color: #000; padding: 3px 8px; border-radius: 4px; font-weight: bold; border: 1px solid #1DB954; font-size: 12px; }
+        .carta { background: #fff; color: #000; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 11px; }
         button { padding: 12px 25px; font-size: 18px; cursor: pointer; background: #1DB954; border: none; color: white; border-radius: 50px; font-weight: bold; margin: 5px; }
         .btn-revelar { background: #f39c12; }
-        #reproductor-status { margin: 10px; font-size: 22px; color: #1DB954; font-weight: bold; }
-        .revelado { font-size: 40px; color: gold; font-weight: bold; margin-top: 10px; display: none; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 15px; border: 2px solid gold; }
+        #reproductor-status { margin: 10px; font-size: 20px; color: #1DB954; }
+        .revelado { font-size: 35px; color: gold; font-weight: bold; margin-top: 10px; display: none; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 15px; border: 2px solid gold; }
         #player-invisible { position: absolute; top: -9999px; }
-        .sala-tag { position: absolute; top: 10px; right: 10px; background: #333; padding: 5px 10px; border-radius: 5px; font-size: 12px; }
-        #pantalla-victoria { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 100; justify-content: center; align-items: center; flex-direction: column; }
     </style>
 </head>
 <body>
-    <div id="pantalla-victoria">
-        <div style="font-size: 30px; color: #1DB954;">¡FIN DE LA PARTIDA!</div>
-        <div id="ganador-tv" style="font-size: 80px; color: gold; font-weight: bold;">--</div>
-        <button onclick="location.reload()">NUEVA PARTIDA 🔄</button>
-    </div>
-
-    <div id="sala-nombre" class="sala-tag">SALA: --</div>
     <div class="header">🎶 Yo me la sé 🎶</div>
     
     <div class="controles-tv">
-        <div style="display: flex; gap: 20px; align-items: center; justify-content: center;">
-            <div style="background:white; padding:5px; border-radius:5px;"><div id="qrcode"></div></div>
+        <div id="aviso-turno">ESPERANDO JUGADORES</div>
+        <div style="display: flex; gap: 15px; align-items: center; justify-content: center;">
+            <div id="qrcode" style="background:white; padding:5px; border-radius:5px;"></div>
             <div>
-                <button id="btn-principal" onclick="controladorPrincipal()">INICIAR 🎮</button>
+                <button id="btn-principal" onclick="nuevaRonda()">INICIAR / SIGUIENTE 🚀</button>
                 <button id="btn-revelar" class="btn-revelar" style="display:none;" onclick="revelarAño()">REVELAR AÑO ✨</button>
             </div>
         </div>
-        <div id="reproductor-status">Cargando...</div>
+        <div id="reproductor-status">Escanea el código para unirte</div>
         <div id="revelado-datos" class="revelado"></div>
     </div>
 
     <div id="player-invisible"></div>
-    <div class="tablero" id="tablero-jugadores"></div>
+    <div id="tablero-jugadores" class="tablero"></div>
 
     <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-database-compat.js"></script>
     <script src="https://www.youtube.com/iframe_api"></script>
-
     <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyA_WChhOabs671aPhX5uhX3FaLnn_YOc0c",
-            authDomain: "party-music-3faae.firebaseapp.com",
-            databaseURL: "https://party-music-3faae-default-rtdb.firebaseio.com",
-            projectId: "party-music-3faae",
-            storageBucket: "party-music-3faae.firebasestorage.app",
-            messagingSenderId: "877613370267",
-            appId: "1:877613370267:web:f096e520df8a350ba86f3e"
-        };
+        const firebaseConfig = { apiKey: "AIzaSyA_WChhOabs671aPhX5uhX3FaLnn_YOc0c", authDomain: "party-music-3faae.firebaseapp.com", databaseURL: "https://party-music-3faae-default-rtdb.firebaseio.com", projectId: "party-music-3faae", storageBucket: "party-music-3faae.firebasestorage.app", messagingSenderId: "877613370267", appId: "1:877613370267:web:f096e520df8a350ba86f3e" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
+        let miSala = prompt("SALA:").toUpperCase() || "FIESTA";
+        db.ref(`salas/${miSala}`).remove();
 
-        let miSala = prompt("Sala:").toUpperCase() || "FIESTA";
-        document.getElementById('sala-nombre').innerText = "SALA: " + miSala;
-        db.ref(`salas/${miSala}`).remove(); 
+        new QRCode(document.getElementById("qrcode"), { text: window.location.href.replace("index.html", "") + "mando.html?sala=" + miSala, width: 80, height: 80 });
 
-        new QRCode(document.getElementById("qrcode"), {
-            text: window.location.href.replace("index.html", "") + "mando.html?sala=" + miSala,
-            width: 90, height: 90
-        });
-
-        const playlist = [
+        let playlist = [
             { t: "September", a: "Earth, Wind & Fire", y: 1978, idYT: "Gs069dndIYk" },
             { t: "Take On Me", a: "a-ha", y: 1984, idYT: "djV11Xbc914" },
             { t: "Beat It", a: "Michael Jackson", y: 1982, idYT: "oRdxUFDoQe0" },
             { t: "Toxic", a: "Britney Spears", y: 2003, idYT: "LOZuxwVk7TU" },
             { t: "Uptown Funk", a: "Bruno Mars", y: 2014, idYT: "OPf0YbXqDm0" },
-            { t: "Rayando El Sol", a: "Maná", y: 1990, idYT: "tcWzVUlR7Y4" },
-            { t: "Wannabe", a: "Spice Girls", y: 1996, idYT: "gJLIiF15wjQ" }
+            { t: "Rayando El Sol", a: "Maná", y: 1990, idYT: "tcWzVUlR7Y4" }
         ];
 
-        let player, indiceTurno = 0, juegoIniciado = false, idTurnoActual = "";
-
-        function onYouTubeIframeAPIReady() {
-            player = new YT.Player('player-invisible', { height: '0', width: '0', videoId: '', playerVars: { 'autoplay': 1, 'controls': 0 } });
-        }
-
-        function controladorPrincipal() {
-            if (!juegoIniciado) {
-                if (player && player.playVideo) { player.playVideo(); player.pauseVideo(); }
-                juegoIniciado = true;
-                document.getElementById('btn-principal').innerText = "SIGUIENTE 🚀";
-            }
-            nuevaRonda();
-        }
+        let player, indiceTurno = 0, actualId = "";
+        function onYouTubeIframeAPIReady() { player = new YT.Player('player-invisible', { height: '0', width: '0', videoId: '', playerVars: { 'autoplay': 1, 'controls': 0 } }); }
 
         function nuevaRonda() {
-            db.ref(`salas/${miSala}/jugadores`).once('value', (snap) => {
-                const j = snap.val(); if(!j) return alert("Sin jugadores");
-                db.ref(`salas/${miSala}/estado_juego/votos`).remove();
-                db.ref(`salas/${miSala}/estado_juego/comprada`).remove();
-                
-                const ids = Object.keys(j);
-                idTurnoActual = ids[indiceTurno];
-                const cancion = playlist[Math.floor(Math.random() * playlist.length)];
+            if (playlist.length === 0) return alert("¡Sin más canciones!");
+            
+            // Limpieza visual inmediata
+            const rev = document.getElementById('revelado-datos');
+            rev.style.display = 'none'; rev.innerHTML = '';
 
-                if(player && player.loadVideoById) player.loadVideoById(cancion.idYT);
+            db.ref(`salas/${miSala}/jugadores`).once('value', (snap) => {
+                const j = snap.val(); if(!j) return;
+                
+                procesarTokensRondaAnterior();
+
+                const ids = Object.keys(j);
+                actualId = ids[indiceTurno];
+                
+                const randomIndex = Math.floor(Math.random() * playlist.length);
+                const cancion = playlist.splice(randomIndex, 1)[0]; 
+
+                if(player) player.loadVideoById(cancion.idYT);
 
                 db.ref(`salas/${miSala}/estado_juego`).set({
                     fase: "JUGANDO", cancion_actual: cancion, revelar: false,
-                    turno_de: idTurnoActual, nombre_turno: j[idTurnoActual].nombre
+                    turno_de: actualId, nombre_turno: j[actualId].nombre,
+                    posicion_bloqueada: -1, votos: {}
                 });
+                
+                document.getElementById('aviso-turno').innerText = "TURNO DE: " + j[actualId].nombre.toUpperCase();
                 indiceTurno = (indiceTurno + 1) % ids.length;
             });
         }
 
-        function revelarAño() {
-            db.ref(`salas/${miSala}/estado_juego/revelar`).set(true);
-            document.getElementById('btn-revelar').style.display = 'none';
-            document.getElementById('btn-principal').style.display = 'inline-block';
+        function procesarTokensRondaAnterior() {
+            db.ref(`salas/${miSala}/estado_juego`).once('value', (s) => {
+                const e = s.val(); if(!e || !e.votos) return;
+                const v = Object.values(e.votos);
+                if(v.filter(x => x === true).length > v.length / 2) {
+                    db.ref(`salas/${miSala}/jugadores/${e.turno_de}/tokens`).transaction(t => (t || 0) + 1);
+                }
+            });
         }
+
+        function revelarAño() { db.ref(`salas/${miSala}/estado_juego/revelar`).set(true); }
 
         db.ref(`salas/${miSala}/estado_juego`).on('value', (snap) => {
             const e = snap.val(); if(!e) return;
-            if(e.fase === "ESPERA_ROBO") {
-                document.getElementById('reproductor-status').innerHTML = "⚠️ ¿ALGUIEN ROBA?";
-                document.getElementById('btn-principal').style.display = 'none';
-                document.getElementById('btn-revelar').style.display = 'inline-block';
-            }
-            if(e.revelar) {
-                const c = e.cancion_actual;
+            if(e.fase === "JUGANDO") { document.getElementById('btn-revelar').style.display = 'none'; document.getElementById('btn-principal').style.display = 'inline-block'; }
+            if(e.fase === "ESPERA_ROBO") { document.getElementById('btn-principal').style.display = 'none'; document.getElementById('btn-revelar').style.display = 'inline-block'; }
+            if(e.revelar) { 
                 const rev = document.getElementById('revelado-datos');
-                rev.innerHTML = `✨ ${c.y} ✨<br><small style="font-size:18px">${c.t}</small>`;
-                rev.style.display = 'block';
+                rev.innerHTML = `✨ ${e.cancion_actual.y} ✨<br><small>${e.cancion_actual.t}</small>`;
+                rev.style.display = 'block'; 
             }
         });
 
         db.ref(`salas/${miSala}/jugadores`).on('value', (snap) => {
             const data = snap.val(); if(!data) return;
             const cont = document.getElementById('tablero-jugadores');
-            db.ref(`salas/${miSala}/estado_juego/turno_de`).once('value', (st) => {
-                const idActivo = st.val();
-                cont.innerHTML = "";
-                for (let id in data) {
-                    const p = data[id];
-                    if((p.linea || []).length >= 10) mostrarVictoria(p.nombre);
-                    const linea = (p.linea || []).sort((a,b)=>a-b).map(a => `<div class="carta">${a}</div>`).join('');
-                    cont.innerHTML += `
-                        <div class="jugador ${id === idActivo ? 'turno-activo' : ''}">
-                            <div class="indicador">TURNO</div>
-                            <h3>${p.nombre}</h3>
-                            <div style="color:gold; font-size:12px;">🪙 ${p.tokens} | 🎴 ${(p.linea || []).length}</div>
-                            <div class="linea">${linea}</div>
-                        </div>`;
-                }
-            });
+            cont.innerHTML = "";
+            for (let id in data) {
+                const p = data[id];
+                cont.innerHTML += `<div class="jugador ${id === actualId ? 'turno-activo' : ''}"><h3>${p.nombre}</h3><div style="color:gold">🪙 Tokens: ${p.tokens}</div><div class="linea">${(p.linea || []).sort((a,b)=>a-b).map(a => `<div class="carta">${a}</div>`).join('')}</div></div>`;
+            }
         });
-
-        function mostrarVictoria(n) {
-            document.getElementById('pantalla-victoria').style.display = 'flex';
-            document.getElementById('ganador-tv').innerText = n;
-            db.ref(`salas/${miSala}/estado_juego/ganador`).set(n);
-        }
     </script>
 </body>
 </html>
