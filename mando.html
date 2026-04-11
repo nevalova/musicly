@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mando Hitster</title>
+    <style>
+        body { background: #121212; color: white; font-family: sans-serif; text-align: center; padding: 15px; }
+        .card { background: #1e1e1e; padding: 20px; border-radius: 15px; margin-bottom: 15px; border: 1px solid #333; }
+        button { padding: 15px; border-radius: 50px; border: none; font-weight: bold; cursor: pointer; margin: 5px; width: 90%; font-size: 16px; }
+        input { padding: 15px; width: 80%; border-radius: 8px; border: none; margin-bottom: 15px; font-size: 18px; }
+        .btn-green { background: #1DB954; color: white; }
+        .btn-grey { background: #444; color: white; margin: 10px 0; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div id="setup" class="card">
+        <h2>Ingresar</h2>
+        <input type="text" id="salaInput" placeholder="Nombre de sala">
+        <input type="text" id="nombreInput" placeholder="Tu nombre">
+        <button class="btn-green" onclick="unirme()">ENTRAR</button>
+    </div>
+
+    <div id="juego" class="hidden">
+        <div class="card">
+            <div id="status-msg" style="font-size: 18px; font-weight: bold; color: #1DB954;">Esperando...</div>
+            <div style="color: gold; margin-top: 10px;">🪙 Tokens: <span id="valTokens">3</span></div>
+        </div>
+        <div id="zona-posicion" class="hidden"></div>
+        <div id="zona-voto" class="hidden card">
+            <p>¿Adivinó artista/título?</p>
+            <button class="btn-green" onclick="enviarVoto(true)">SÍ 👍</button>
+            <button style="background:#f44336; color:white;" onclick="enviarVoto(false)">NO 👎</button>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-database-compat.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyA_WChhOabs671aPhX5uhX3FaLnn_YOc0c",
+            authDomain: "party-music-3faae.firebaseapp.com",
+            databaseURL: "https://party-music-3faae-default-rtdb.firebaseio.com",
+            projectId: "party-music-3faae",
+            storageBucket: "party-music-3faae.firebasestorage.app",
+            messagingSenderId: "877613370267",
+            appId: "1:877613370267:web:f096e520df8a350ba86f3e"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let miId = "", misTokens = 3, miLinea = [2000], salaActual = "";
+        let tokenEntregadoEnEstaRonda = false;
+
+        const params = new URLSearchParams(window.location.search);
+        if(params.has('sala')) document.getElementById('salaInput').value = params.get('sala');
+
+        function unirme() {
+            salaActual = document.getElementById('salaInput').value.trim().toUpperCase();
+            const n = document.getElementById('nombreInput').value;
+            if(!n || !salaActual) return;
+            miId = "p_" + Date.now();
+            db.ref(`salas/${salaActual}/jugadores/${miId}`).set({ nombre: n, tokens: 3, linea: [2000] });
+            document.getElementById('setup').classList.add('hidden');
+            document.getElementById('juego').classList.remove('hidden');
+            escucharJuego();
+        }
+
+        function escucharJuego() {
+            db.ref(`salas/${salaActual}/estado_juego`).on('value', (snap) => {
+                const e = snap.val(); if(!e) return;
+                const msg = document.getElementById('status-msg');
+                const v = document.getElementById('zona-voto');
+                const p = document.getElementById('zona-posicion');
+
+                if(e.fase === "JUGANDO") {
+                    tokenEntregadoEnEstaRonda = false; 
+                    v.classList.add('hidden');
+                    if(e.turno_de === miId) {
+                        msg.innerText = "⭐ TU TURNO: Ubica el año";
+                        dibujarLinea();
+                    } else {
+                        msg.innerText = "Turno de " + e.nombre_turno;
+                        p.classList.add('hidden');
+                    }
+                }
+
+                if(e.revelar === true) {
+                    p.classList.add('hidden');
+                    if(e.turno_de !== miId) {
+                        msg.innerText = "¿" + e.nombre_turno + " adivinó?";
+                        v.classList.remove('hidden');
+                    } else {
+                        msg.innerText = "Esperando votos...";
+                    }
+                }
+            });
+
+            // Consenso Mayoritario
+            db.ref(`salas/${salaActual}/estado_juego/votos`).on('value', (snap) => {
+                const votos = snap.val(); if(!votos || tokenEntregadoEnEstaRonda) return;
+                db.ref(`salas/${salaActual}/jugadores`).once('value', (sj) => {
+                    const totalJ = Object.keys(sj.val()).length - 1;
+                    const vArray = Object.values(votos);
+                    if(vArray.length >= totalJ && totalJ > 0) {
+                        const sies = vArray.filter(x => x === true).length;
+                        const noes = vArray.filter(x => x === false).length;
+                        if(sies > noes) procesarResultado(true);
+                        else if(noes > sies) procesarResultado(false);
+                    }
+                });
+            });
+        }
+
+        function dibujarLinea() {
+            const cont = document.getElementById('zona-posicion');
+            cont.classList.remove('hidden'); cont.innerHTML = "";
+            let años = [...new Set(miLinea)].sort((a,b)=>a-b);
+            for(let i=0; i<=años.length; i++) {
+                cont.innerHTML += `<button class="btn-grey" onclick="colocar(${i}, ${JSON.stringify(años)})">Poner aquí</button>`;
+                if(i < años.length) cont.innerHTML += `<div>📅 ${años[i]}</div>`;
+            }
+        }
+
+        function colocar(idx, lista) {
+            document.getElementById('zona-posicion').classList.add('hidden');
+            db.ref(`salas/${salaActual}/estado_juego/cancion_actual`).once('value', (s) => {
+                const añoReal = s.val().y;
+                let inf = idx === 0 ? 0 : lista[idx-1];
+                let sup = idx === lista.length ? 3000 : lista[idx];
+                if(añoReal >= inf && añoReal <= sup) {
+                    alert("¡ACIERTO!");
+                    miLinea.push(añoReal);
+                    db.ref(`salas/${salaActual}/jugadores/${miId}/linea`).set(miLinea);
+                } else { alert("ERROR. Era de " + añoReal); }
+                db.ref(`salas/${salaActual}/estado_juego/revelar`).set(true);
+            });
+        }
+
+        function enviarVoto(val) {
+            db.ref(`salas/${salaActual}/estado_juego/votos/${miId}`).set(val);
+            document.getElementById('zona-voto').classList.add('hidden');
+        }
+
+        function procesarResultado(gano) {
+            db.ref(`salas/${salaActual}/estado_juego`).once('value', (s) => {
+                if(s.val().turno_de === miId && !tokenEntregadoEnEstaRonda) {
+                    tokenEntregadoEnEstaRonda = true;
+                    if(gano) {
+                        misTokens++;
+                        db.ref(`salas/${salaActual}/jugadores/${miId}/tokens`).set(misTokens);
+                        document.getElementById('valTokens').innerText = misTokens;
+                        alert("¡La mayoría votó que sí! Ganaste un token.");
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>

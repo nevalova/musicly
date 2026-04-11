@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Hitster TV - Central</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        body { background: #121212; color: white; font-family: 'Segoe UI', sans-serif; text-align: center; margin: 0; }
+        .header { background: #1DB954; padding: 15px; font-size: 24px; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .controles-tv { margin: 20px; padding: 20px; border: 2px solid #1DB954; display: inline-block; border-radius: 20px; background: #1e1e1e; }
+        .tablero { display: flex; justify-content: center; gap: 20px; padding: 20px; flex-wrap: wrap; }
+        .jugador { border: 2px solid #333; padding: 15px; border-radius: 15px; background: #252525; min-width: 250px; position: relative; transition: 0.3s; }
+        .linea { display: flex; gap: 8px; justify-content: center; margin-top: 10px; flex-wrap: wrap; }
+        .carta { background: #fff; color: #000; padding: 5px 10px; border-radius: 5px; font-weight: bold; border: 2px solid #1DB954; font-size: 14px; }
+        button { padding: 12px 25px; font-size: 18px; cursor: pointer; background: #1DB954; border: none; color: white; border-radius: 50px; font-weight: bold; margin: 5px; }
+        #reproductor-status { margin: 15px; font-size: 22px; color: #1DB954; font-weight: bold; }
+        .revelado { font-size: 45px; color: gold; font-weight: bold; margin-top: 15px; display: none; }
+        #player-invisible { position: absolute; top: -9999px; visibility: hidden; }
+        .sala-tag { position: absolute; top: 10px; right: 10px; background: #333; padding: 5px 10px; border-radius: 5px; font-size: 12px; }
+        .ganador-anim { border: 5px solid gold !important; transform: scale(1.05); box-shadow: 0 0 20px gold; }
+    </style>
+</head>
+<body>
+    <div id="sala-nombre" class="sala-tag">SALA: --</div>
+    <div class="header">🎶 HITSTER CENTRAL 🎶</div>
+    
+    <div class="controles-tv">
+        <div style="display: flex; gap: 30px; align-items: center; justify-content: center; flex-wrap: wrap;">
+            <div style="background:white; padding:10px; border-radius:10px;"><div id="qrcode"></div></div>
+            <div>
+                <button onclick="nuevaRonda()">SIGUIENTE CANCIÓN 🚀</button><br>
+                <button onclick="resetearManual()" style="background:#f44336; font-size:12px; margin-top:10px;">BORRAR JUGADORES</button>
+            </div>
+        </div>
+        <div id="reproductor-status">Presiona SIGUIENTE para iniciar audio</div>
+        <div id="revelado-datos" class="revelado"></div>
+    </div>
+
+    <div id="player-invisible"></div>
+    <div class="tablero" id="tablero-jugadores"></div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-database-compat.js"></script>
+    <script src="https://www.youtube.com/iframe_api"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyA_WChhOabs671aPhX5uhX3FaLnn_YOc0c",
+            authDomain: "party-music-3faae.firebaseapp.com",
+            databaseURL: "https://party-music-3faae-default-rtdb.firebaseio.com",
+            projectId: "party-music-3faae",
+            storageBucket: "party-music-3faae.firebasestorage.app",
+            messagingSenderId: "877613370267",
+            appId: "1:877613370267:web:f096e520df8a350ba86f3e"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let miSala = prompt("Nombre de la sala:").toUpperCase() || "JUEGO_LOCAL";
+        document.getElementById('sala-nombre').innerText = "SALA: " + miSala;
+        db.ref(`salas/${miSala}`).onDisconnect().remove();
+
+        new QRCode(document.getElementById("qrcode"), {
+            text: window.location.href.split('?')[0].replace("index.html", "") + "mando.html?sala=" + miSala,
+            width: 130, height: 130
+        });
+
+        const playlist = [
+            { t: "September", a: "Earth, Wind & Fire", y: 1978, idYT: "Gs069dndIYk" },
+            { t: "Take On Me", a: "a-ha", y: 1984, idYT: "djV11Xbc914" },
+            { t: "Girls Just Want to Have Fun", a: "Cyndi Lauper", y: 1983, idYT: "PIb6AZdTr-A" },
+            { t: "Under Pressure", a: "Queen & David Bowie", y: 1981, idYT: "a01QQZylGuI" },
+            { t: "Beat It", a: "Michael Jackson", y: 1982, idYT: "oRdxUFDoQe0" },
+            { t: "Smells Like Teen Spirit", a: "Nirvana", y: 1991, idYT: "hTWKbfoikeg" },
+            { t: "Wannabe", a: "Spice Girls", y: 1996, idYT: "gJLIiF15wjQ" },
+            { t: "Rayando El Sol", a: "Maná", y: 1990, idYT: "tcWzVUlR7Y4" },
+            { t: "Toxic", a: "Britney Spears", y: 2003, idYT: "LOZuxwVk7TU" },
+            { t: "Uptown Funk", a: "Bruno Mars", y: 2014, idYT: "OPf0YbXqDm0" }
+        ];
+
+        let player, indiceTurno = 0;
+
+        function onYouTubeIframeAPIReady() {
+            player = new YT.Player('player-invisible', {
+                height: '0', width: '0', videoId: '',
+                playerVars: { 'autoplay': 1, 'controls': 0, 'enablejsapi': 1 },
+                events: { 'onReady': (e) => console.log("YT Listo") }
+            });
+        }
+
+        function nuevaRonda() {
+            db.ref(`salas/${miSala}/jugadores`).once('value', (snap) => {
+                const j = snap.val();
+                if(!j) return alert("Esperando jugadores...");
+                
+                db.ref(`salas/${miSala}/estado_juego/votos`).remove();
+
+                const ids = Object.keys(j);
+                const actualId = ids[indiceTurno];
+                const nombre = j[actualId].nombre;
+                const cancion = playlist[Math.floor(Math.random() * playlist.length)];
+
+                if(player && player.loadVideoById) {
+                    player.loadVideoById(cancion.idYT);
+                    player.playVideo();
+                    player.unMute();
+                }
+
+                document.getElementById('revelado-datos').style.display = 'none';
+                document.getElementById('reproductor-status').innerText = "🔊 Turno de: " + nombre;
+
+                db.ref(`salas/${miSala}/estado_juego`).set({
+                    fase: "JUGANDO", cancion_actual: cancion, revelar: false,
+                    turno_de: actualId, nombre_turno: nombre
+                });
+                indiceTurno = (indiceTurno + 1) % ids.length;
+            });
+        }
+
+        function resetearManual() { if(confirm("¿Borrar todo?")) db.ref(`salas/${miSala}`).remove(); }
+
+        db.ref(`salas/${miSala}/estado_juego/revelar`).on('value', (snap) => {
+            if(snap.val() === true) {
+                db.ref(`salas/${miSala}/estado_juego/cancion_actual`).once('value', (s) => {
+                    const c = s.val();
+                    const div = document.getElementById('revelado-datos');
+                    div.innerHTML = `✨ ${c.y} ✨<br><small style="font-size:20px">${c.t} - ${c.a}</small>`;
+                    div.style.display = 'block';
+                });
+            }
+        });
+
+        db.ref(`salas/${miSala}/jugadores`).on('value', (snapshot) => {
+            const data = snapshot.val();
+            const contenedor = document.getElementById('tablero-jugadores');
+            contenedor.innerHTML = "";
+            for (let id in data) {
+                const p = data[id];
+                const cartasTotal = (p.linea || []).length;
+                const esGanador = cartasTotal >= 10;
+                const claseGanador = esGanador ? "ganador-anim" : "";
+                const linea = (p.linea || []).sort((a,b)=>a-b).map(a => `<div class="carta">${a}</div>`).join('');
+                
+                contenedor.innerHTML += `
+                    <div class="jugador ${claseGanador}">
+                        <h2>${p.nombre} ${esGanador ? '👑' : ''}</h2>
+                        <div style="color:gold">Tokens: ${p.tokens} | Cartas: ${cartasTotal}/10</div>
+                        <div class="linea">${linea}</div>
+                    </div>`;
+                
+                if(esGanador) document.getElementById('reproductor-status').innerText = "🎉 " + p.nombre.toUpperCase() + " GANA LA PARTIDA 🎉";
+            }
+        });
+    </script>
+</body>
+</html>
