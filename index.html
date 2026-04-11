@@ -2,34 +2,44 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Hitster TV - Central</title>
+    <title>Yo me la sé - TV Central</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        body { background: #121212; color: white; font-family: 'Segoe UI', sans-serif; text-align: center; margin: 0; overflow-x: hidden; }
-        .header { background: #1DB954; padding: 15px; font-size: 24px; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        body { background: #121212; color: white; font-family: 'Segoe UI', sans-serif; text-align: center; margin: 0; overflow: hidden; }
+        .header { background: #1DB954; padding: 15px; font-size: 28px; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.3); text-transform: uppercase; letter-spacing: 2px; }
         .controles-tv { margin: 20px; padding: 20px; border: 2px solid #1DB954; display: inline-block; border-radius: 20px; background: #1e1e1e; }
-        .tablero { display: flex; justify-content: center; gap: 20px; padding: 20px; flex-wrap: wrap; }
-        .jugador { border: 2px solid #333; padding: 15px; border-radius: 15px; background: #252525; min-width: 250px; transition: 0.3s; }
-        .linea { display: flex; gap: 8px; justify-content: center; margin-top: 10px; flex-wrap: wrap; }
-        .carta { background: #fff; color: #000; padding: 5px 10px; border-radius: 5px; font-weight: bold; border: 2px solid #1DB954; font-size: 14px; }
-        button { padding: 12px 25px; font-size: 18px; cursor: pointer; background: #1DB954; border: none; color: white; border-radius: 50px; font-weight: bold; margin: 5px; }
-        #reproductor-status { margin: 15px; font-size: 22px; color: #1DB954; font-weight: bold; }
-        .revelado { font-size: 45px; color: gold; font-weight: bold; margin-top: 15px; display: none; }
+        .tablero { display: flex; justify-content: center; gap: 15px; padding: 15px; flex-wrap: wrap; height: 60vh; overflow-y: auto; }
+        .jugador { border: 2px solid #333; padding: 10px; border-radius: 12px; background: #252525; min-width: 220px; transition: 0.3s; position: relative; }
+        .linea { display: flex; gap: 5px; justify-content: center; margin-top: 8px; flex-wrap: wrap; }
+        .carta { background: #fff; color: #000; padding: 3px 8px; border-radius: 4px; font-weight: bold; border: 1px solid #1DB954; font-size: 12px; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; background: #1DB954; border: none; color: white; border-radius: 50px; font-weight: bold; margin: 5px; }
+        #reproductor-status { margin: 10px; font-size: 20px; color: #1DB954; font-weight: bold; }
+        .revelado { font-size: 40px; color: gold; font-weight: bold; margin-top: 10px; display: none; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 10px; }
         #player-invisible { position: absolute; top: -9999px; }
         .sala-tag { position: absolute; top: 10px; right: 10px; background: #333; padding: 5px 10px; border-radius: 5px; font-size: 12px; }
-        .turno-activo { border-color: gold !important; box-shadow: 0 0 15px gold; }
+        .turno-activo { border-color: gold !important; box-shadow: 0 0 15px gold; transform: scale(1.02); }
+        /* Pantalla de Victoria */
+        #pantalla-victoria { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 100; justify-content: center; align-items: center; flex-direction: column; }
+        .ganador-nombre { font-size: 80px; color: gold; text-shadow: 0 0 20px gold; font-weight: bold; margin: 20px 0; }
     </style>
 </head>
 <body>
+    <div id="pantalla-victoria">
+        <div style="font-size: 30px; color: #1DB954;">¡FIN DE LA PARTIDA!</div>
+        <div class="ganador-nombre" id="ganador-tv">--</div>
+        <div style="font-size: 24px;">🏆 ¡Es el maestro de "Yo me la sé"! 🏆</div>
+        <button onclick="location.reload()" style="margin-top: 30px; font-size: 20px;">JUGAR OTRA VEZ 🔄</button>
+    </div>
+
     <div id="sala-nombre" class="sala-tag">SALA: --</div>
-    <div class="header">🎶 HITSTER CENTRAL 🎶</div>
+    <div class="header">🎶 Yo me la sé 🎶</div>
     
     <div class="controles-tv">
-        <div style="display: flex; gap: 30px; align-items: center; justify-content: center; flex-wrap: wrap;">
-            <div style="background:white; padding:10px; border-radius:10px;"><div id="qrcode"></div></div>
+        <div style="display: flex; gap: 20px; align-items: center; justify-content: center; flex-wrap: wrap;">
+            <div style="background:white; padding:8px; border-radius:8px;"><div id="qrcode"></div></div>
             <button id="btn-principal" onclick="controladorPrincipal()">INICIAR JUEGO 🎮</button>
         </div>
-        <div id="reproductor-status">Presiona INICIAR para sonar</div>
+        <div id="reproductor-status">Presiona INICIAR</div>
         <div id="revelado-datos" class="revelado"></div>
     </div>
 
@@ -53,12 +63,13 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        let miSala = prompt("Sala:").toUpperCase() || "TEST";
+        let miSala = prompt("Sala:").toUpperCase() || "FIESTA";
         document.getElementById('sala-nombre').innerText = "SALA: " + miSala;
+        db.ref(`salas/${miSala}`).remove(); // Limpiar sala al iniciar
 
         new QRCode(document.getElementById("qrcode"), {
             text: window.location.href.replace("index.html", "") + "mando.html?sala=" + miSala,
-            width: 130, height: 130
+            width: 100, height: 100
         });
 
         const playlist = [
@@ -69,9 +80,9 @@
             { t: "Beat It", a: "Michael Jackson", y: 1982, idYT: "oRdxUFDoQe0" },
             { t: "Smells Like Teen Spirit", a: "Nirvana", y: 1991, idYT: "hTWKbfoikeg" },
             { t: "Wannabe", a: "Spice Girls", y: 1996, idYT: "gJLIiF15wjQ" },
-            { t: "Rayando El Sol", a: "Maná", y: 1990, idYT: "tcWzVUlR7Y4" },
             { t: "Toxic", a: "Britney Spears", y: 2003, idYT: "LOZuxwVk7TU" },
-            { t: "Uptown Funk", a: "Bruno Mars", y: 2014, idYT: "OPf0YbXqDm0" }
+            { t: "Despacito", a: "Luis Fonsi ft. Daddy Yankee", y: 2017, idYT: "kJQP7kiw5Fk" },
+            { t: "Blinding Lights", a: "The Weeknd", y: 2019, idYT: "fHI8X4OXluQ" }
         ];
 
         let player, indiceTurno = 0, juegoIniciado = false;
@@ -80,11 +91,10 @@
         }
 
         function controladorPrincipal() {
-            const btn = document.getElementById('btn-principal');
             if (!juegoIniciado) {
                 if (player && player.playVideo) { player.playVideo(); player.pauseVideo(); }
                 juegoIniciado = true;
-                btn.innerText = "SIGUIENTE CANCIÓN 🚀";
+                document.getElementById('btn-principal').innerText = "SIGUIENTE CANCIÓN 🚀";
             }
             nuevaRonda();
         }
@@ -94,7 +104,7 @@
                 const j = snap.val();
                 if(!j) return alert("Esperando jugadores...");
                 db.ref(`salas/${miSala}/estado_juego/votos`).remove();
-                db.ref(`salas/${miSala}/estado_juego/robo`).remove();
+                db.ref(`salas/${miSala}/estado_juego/comprada`).remove();
 
                 const ids = Object.keys(j);
                 const actualId = ids[indiceTurno];
@@ -111,18 +121,22 @@
         }
 
         db.ref(`salas/${miSala}/jugadores`).on('value', (snapshot) => {
-            const data = snapshot.val();
+            const data = snapshot.val(); if(!data) return;
             const contenedor = document.getElementById('tablero-jugadores');
             db.ref(`salas/${miSala}/estado_juego/turno_de`).once('value', (st) => {
                 const idTurno = st.val();
                 contenedor.innerHTML = "";
                 for (let id in data) {
                     const p = data[id];
+                    const cartasTotal = (p.linea || []).length;
+                    
+                    if(cartasTotal >= 10) { mostrarVictoria(p.nombre); }
+
                     const linea = (p.linea || []).sort((a,b)=>a-b).map(a => `<div class="carta">${a}</div>`).join('');
                     contenedor.innerHTML += `
                         <div class="jugador ${id === idTurno ? 'turno-activo' : ''}">
-                            <h2>${p.nombre}</h2>
-                            <div style="color:gold">Tokens: ${p.tokens}</div>
+                            <h3 style="margin:5px 0;">${p.nombre}</h3>
+                            <div style="color:gold; font-size:12px;">🪙 Tokens: ${p.tokens} | 🎴 Cartas: ${cartasTotal}/10</div>
                             <div class="linea">${linea}</div>
                         </div>`;
                 }
@@ -134,11 +148,18 @@
                 db.ref(`salas/${miSala}/estado_juego/cancion_actual`).once('value', (s) => {
                     const c = s.val();
                     const div = document.getElementById('revelado-datos');
-                    div.innerHTML = `✨ ${c.y} ✨<br><small style="font-size:20px">${c.t} - ${c.a}</small>`;
+                    div.innerHTML = `✨ ${c.y} ✨<br><small style="font-size:18px">${c.t} - ${c.a}</small>`;
                     div.style.display = 'block';
                 });
             }
         });
+
+        function mostrarVictoria(nombre) {
+            document.getElementById('pantalla-victoria').style.display = 'flex';
+            document.getElementById('ganador-tv').innerText = nombre;
+            db.ref(`salas/${miSala}/estado_juego/ganador`).set(nombre);
+            if(player && player.stopVideo) player.stopVideo();
+        }
     </script>
 </body>
 </html>

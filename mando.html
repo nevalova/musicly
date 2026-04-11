@@ -2,52 +2,68 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mando Hitster</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mando - Yo me la sé</title>
     <style>
-        body { background: #121212; color: white; font-family: sans-serif; text-align: center; padding: 10px; }
-        .card { background: #1e1e1e; padding: 15px; border-radius: 12px; margin-bottom: 10px; border: 1px solid #333; }
-        button { padding: 15px; border-radius: 50px; border: none; font-weight: bold; cursor: pointer; margin: 5px; width: 95%; font-size: 14px; }
+        body { background: #121212; color: white; font-family: sans-serif; text-align: center; padding: 10px; margin: 0; }
+        .card { background: #1e1e1e; padding: 12px; border-radius: 12px; margin-bottom: 8px; border: 1px solid #333; }
+        button { padding: 15px; border-radius: 50px; border: none; font-weight: bold; cursor: pointer; margin: 5px 0; width: 100%; font-size: 14px; text-transform: uppercase; }
+        input { padding: 12px; width: 90%; border-radius: 8px; border: 1px solid #333; background: #000; color: white; margin-bottom: 8px; font-size: 16px; text-align: center;}
         .btn-green { background: #1DB954; color: white; }
         .btn-red { background: #f44336; color: white; }
-        .btn-blue { background: #2196F3; color: white; }
-        .btn-grey { background: #444; color: white; margin: 5px 0; }
-        .hidden { display: none; }
-        .otros-jugadores { font-size: 12px; text-align: left; background: #000; padding: 10px; border-radius: 8px; }
-        .linea-mini { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; border-bottom: 1px solid #222; padding-bottom: 5px; }
-        .tag-año { background: #eee; color: #000; padding: 2px 5px; border-radius: 4px; font-weight: bold; }
+        .btn-blue { background: #2196F3; color: white; border: 2px solid gold; box-shadow: 0 0 10px gold; }
+        .btn-grey { background: #444; color: white; margin: 3px 0; padding: 10px; font-size: 12px;}
+        .hidden { display: none !important; }
+        .otros-jugadores { font-size: 11px; text-align: left; background: #080808; padding: 8px; border-radius: 8px; max-height: 150px; overflow-y: auto;}
+        .linea-mini { display: flex; gap: 3px; flex-wrap: wrap; margin-bottom: 5px; border-bottom: 1px solid #222; padding-bottom: 3px; }
+        .tag-año { background: #eee; color: #000; padding: 1px 4px; border-radius: 3px; font-weight: bold; font-size: 10px;}
+        /* Pantallas Finales */
+        #pantalla-final { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 100; justify-content: center; align-items: center; flex-direction: column; padding: 20px; box-sizing: border-box;}
     </style>
 </head>
 <body>
+    <div id="pantalla-final">
+        <div id="final-emoji" style="font-size: 80px;">🏆</div>
+        <div id="final-msg-grande" style="font-size: 30px; font-weight: bold; color: gold; margin: 15px 0;">--</div>
+        <div id="final-msg-chico" style="font-size: 16px;">--</div>
+    </div>
+
     <div id="setup" class="card">
-        <input type="text" id="salaInput" placeholder="SALA" style="padding:10px; width:80%; margin-bottom:10px;">
-        <input type="text" id="nombreInput" placeholder="TU NOMBRE" style="padding:10px; width:80%; margin-bottom:10px;">
-        <button class="btn-green" onclick="unirme()">ENTRAR</button>
+        <h2 style="color:#1DB954; margin-top:0;">Yo me la sé</h2>
+        <input type="text" id="salaInput" placeholder="NOMBRE DE SALA">
+        <input type="text" id="nombreInput" placeholder="TU NOMBRE">
+        <button class="btn-green" onclick="unirme()">ENTRAR A JUGAR</button>
     </div>
 
     <div id="juego" class="hidden">
-        <div class="card">
-            <div id="status-msg">Esperando...</div>
-            <div style="color: gold; margin-top: 5px;">🪙 Tokens: <span id="valTokens">3</span></div>
-            <button id="btn-hitster" class="btn-blue hidden" onclick="comprarCarta()">COMPRAR CARTA (3 Tokens) ⚡</button>
+        <div class="card" style="display:flex; justify-content: space-between; align-items:center; padding: 10px 15px;">
+            <div style="color: gold; font-weight:bold;">🪙 Tokens: <span id="valTokens">3</span></div>
+            <div id="cartas-msg" style="color:#aaa; font-size:12px;">Cartas: --/10</div>
+        </div>
+        
+        <button id="btn-hitster" class="btn-blue hidden" onclick="comprarCarta()">USAR HITSTER CARD (3 Tokens) ⚡</button>
+
+        <div id="status-card" class="card" style="margin-top:5px;">
+            <div id="status-msg" style="color:#1DB954; font-weight:bold;">Esperando...</div>
         </div>
 
-        <div id="zona-otros" class="card otros-jugadores">
-            <strong>Líneas de los demás:</strong>
-            <div id="lista-otros"></div>
-        </div>
-
-        <div id="zona-posicion" class="hidden"></div>
+        <div id="zona-posicion" class="card hidden" style="background:#1a1a1a;"></div>
         
         <div id="zona-robo" class="hidden card">
-            <p id="msg-robo"></p>
             <button class="btn-red" onclick="intentarRobar()">¡ROBAR AÑO! (Gasta 1 Token) 🎯</button>
         </div>
 
         <div id="zona-voto" class="hidden card">
-            <p>¿Adivinó artista y título?</p>
-            <button class="btn-green" onclick="enviarVoto(true)">SÍ 👍</button>
-            <button class="btn-red" onclick="enviarVoto(false)">NO 👎</button>
+            <p style="margin-top:0;">¿Adivinó artista y título?</p>
+            <div style="display:flex; gap:10px;">
+                <button class="btn-green" onclick="enviarVoto(true)">SÍ</button>
+                <button class="btn-red" onclick="enviarVoto(false)">NO</button>
+            </div>
+        </div>
+
+        <div id="zona-otros" class="card otros-jugadores">
+            <strong style="color:#aaa;">Líneas Rivales:</strong>
+            <div id="lista-otros" style="margin-top:5px;"></div>
         </div>
     </div>
 
@@ -73,9 +89,9 @@
         if(params.has('sala')) document.getElementById('salaInput').value = params.get('sala');
 
         function unirme() {
-            salaActual = document.getElementById('salaInput').value.toUpperCase();
-            const n = document.getElementById('nombreInput').value;
-            if(!n || !salaActual) return;
+            salaActual = document.getElementById('salaInput').value.toUpperCase().trim();
+            const n = document.getElementById('nombreInput').value.trim();
+            if(!n || !salaActual) return alert("Rellena los datos");
             miId = "p_" + Date.now();
             db.ref(`salas/${salaActual}/jugadores/${miId}`).set({ nombre: n, tokens: 3, linea: [2000] });
             document.getElementById('setup').classList.add('hidden');
@@ -84,114 +100,128 @@
         }
 
         function escucharJuego() {
-            // Vigilar estado del juego
+            // Estado del juego
             db.ref(`salas/${salaActual}/estado_juego`).on('value', (snap) => {
                 const e = snap.val(); if(!e) return;
                 seguro = false;
                 
-                // Botón Hitster (Compra directa)
+                // Vigilar si hay ganador
+                if(e.ganador) { mostrarPantallaFinal(e.ganador); return; }
+
+                // Botón Hitster (Blindado)
                 const btnH = document.getElementById('btn-hitster');
-                if(misTokens >= 3) btnH.classList.remove('hidden');
-                else btnH.classList.add('hidden');
+                if(misTokens >= 3 && e.fase === "JUGANDO" && !e.comprada) { btnH.classList.remove('hidden'); }
+                else { btnH.classList.add('hidden'); }
 
                 if(e.fase === "JUGANDO") {
                     document.getElementById('zona-voto').classList.add('hidden');
+                    document.getElementById('zona-posicion').classList.add('hidden');
                     if(e.turno_de === miId) {
-                        document.getElementById('status-msg').innerText = "⭐ TU TURNO";
+                        document.getElementById('status-msg').innerText = "⭐ TU TURNO: Coloca la carta";
                         document.getElementById('zona-robo').classList.add('hidden');
-                        dibujarLinea(miLinea, "zona-posicion", true);
+                        dibujarLinea(miLinea, "zona-posicion");
                     } else {
                         document.getElementById('status-msg').innerText = "Turno de " + e.nombre_turno;
-                        document.getElementById('zona-posicion').classList.add('hidden');
-                        document.getElementById('msg-robo').innerText = `${e.nombre_turno} está colocando...`;
                         document.getElementById('zona-robo').classList.remove('hidden');
                     }
                 }
 
                 if(e.revelar === true) {
                     document.getElementById('zona-robo').classList.add('hidden');
+                    document.getElementById('zona-posicion').classList.add('hidden');
                     if(e.turno_de !== miId) document.getElementById('zona-voto').classList.remove('hidden');
+                    else document.getElementById('status-msg').innerText = "Esperando votos...";
                 }
             });
 
-            // Vigilar a otros jugadores (Líneas de tiempo)
+            // Jugadores y Tokens
             db.ref(`salas/${salaActual}/jugadores`).on('value', (snap) => {
-                const jugadores = snap.val();
+                const jugadores = snap.val(); if(!jugadores) return;
                 const lista = document.getElementById('lista-otros');
                 lista.innerHTML = "";
                 for(let id in jugadores) {
+                    const p = jugadores[id];
                     if(id === miId) { 
-                        misTokens = jugadores[id].tokens; 
-                        miLinea = jugadores[id].linea || [2000];
+                        misTokens = p.tokens; 
+                        miLinea = p.linea || [2000];
                         document.getElementById('valTokens').innerText = misTokens;
+                        document.getElementById('cartas-msg').innerText = `Cartas: ${(p.linea || []).length}/10`;
                         continue; 
                     }
-                    const p = jugadores[id];
                     const lineaHtml = (p.linea || []).sort((a,b)=>a-b).map(a => `<span class="tag-año">${a}</span>`).join(' ');
-                    lista.innerHTML += `<div><strong>${p.nombre}:</strong><br><div class="linea-mini">${lineaHtml}</div></div>`;
+                    lista.innerHTML += `<div><strong>${p.nombre}:</strong> <div class="linea-mini">${lineaHtml}</div></div>`;
                 }
             });
 
-            // Escuchar Consenso de Votos
+            // Consenso Votos
             db.ref(`salas/${salaActual}/estado_juego/votos`).on('value', (snap) => {
                 const v = snap.val(); if(!v || seguro) return;
                 db.ref(`salas/${salaActual}/jugadores`).once('value', (sj) => {
-                    const totalJ = Object.keys(sj.val()).length - 1;
+                    const js = sj.val(); if(!js) return;
+                    const totalEsperado = Object.keys(js).length - 1;
                     const vArr = Object.values(v);
-                    if(vArr.length >= totalJ && totalJ > 0) {
+                    if(vArr.length >= totalEsperado && totalEsperado > 0) {
                         seguro = true;
                         const sies = vArr.filter(x => x === true).length;
-                        if(sies > vArr.length/2) procesarResultado(true);
+                        if(sies > vArr.length/2) resolverToken(true);
                     }
                 });
             });
         }
 
-        function dibujarLinea(linea, divId, esMia) {
+        function dibujarLinea(linea, divId) {
             const cont = document.getElementById(divId);
             cont.classList.remove('hidden'); cont.innerHTML = "";
             let años = [...new Set(linea)].sort((a,b)=>a-b);
             for(let i=0; i<=años.length; i++) {
-                cont.innerHTML += `<button class="btn-grey" onclick="colocar(${i}, ${JSON.stringify(años)}, ${esMia})">Poner aquí</button>`;
-                if(i < años.length) cont.innerHTML += `<div>📅 ${años[i]}</div>`;
+                cont.innerHTML += `<button class="btn-grey" onclick="colocar(${i}, ${JSON.stringify(años)})">Poner aquí</button>`;
+                if(i < años.length) cont.innerHTML += `<div style="font-size:14px; margin:2px 0;">📅 ${años[i]}</div>`;
             }
         }
 
-        function colocar(idx, lista, esMia) {
+        function colocar(idx, lista) {
             document.getElementById('zona-posicion').classList.add('hidden');
-            document.getElementById('zona-robo').classList.add('hidden');
-            
             db.ref(`salas/${salaActual}/estado_juego/cancion_actual`).once('value', (s) => {
                 const añoReal = s.val().y;
                 let inf = idx === 0 ? 0 : lista[idx-1];
                 let sup = idx === lista.length ? 3000 : lista[idx];
 
                 if(añoReal >= inf && añoReal <= sup) {
-                    alert("¡ACIERTO!");
                     miLinea.push(añoReal);
                     db.ref(`salas/${salaActual}/jugadores/${miId}/linea`).set(miLinea);
+                    alert("¡ACERTASTE!");
                 } else { alert("ERROR. El año era " + añoReal); }
-                
                 db.ref(`salas/${salaActual}/estado_juego/revelar`).set(true);
             });
         }
 
         function intentarRobar() {
-            if(misTokens < 1) return alert("No tienes tokens");
+            if(misTokens < 1) return alert("Necesitas 1 Token");
             misTokens--;
             db.ref(`salas/${salaActual}/jugadores/${miId}/tokens`).set(misTokens);
-            dibujarLinea(miLinea, "zona-posicion", false);
+            dibujarLinea(miLinea, "zona-posicion");
+            document.getElementById('zona-robo').classList.add('hidden');
             document.getElementById('status-msg').innerText = "🎯 ¡INTENTANDO ROBAR!";
         }
 
         function comprarCarta() {
-            if(misTokens < 3) return;
-            misTokens -= 3;
+            if(seguro || misTokens < 3) return; // Blindaje
+            seguro = true; // Bloqueo anti-spam instantáneo
+            document.getElementById('btn-hitster').classList.add('hidden');
+            
+            // Restar tokens primero (Seguridad)
+            let nuevosTokens = misTokens - 3;
+            db.ref(`salas/${salaActual}/jugadores/${miId}/tokens`).set(nuevosTokens);
+
             db.ref(`salas/${salaActual}/estado_juego/cancion_actual`).once('value', (s) => {
-                miLinea.push(s.val().y);
+                const c = s.val();
+                miLinea.push(c.y);
+                // Añadir carta y marcar como comprada en la ronda
                 db.ref(`salas/${salaActual}/jugadores/${miId}/linea`).set(miLinea);
-                db.ref(`salas/${salaActual}/jugadores/${miId}/tokens`).set(misTokens);
-                alert("¡Hitster Card usada! Carta añadida automáticamente.");
+                db.ref(`salas/${salaActual}/estado_juego/comprada`).set(miId);
+                alert("¡Hitster Card usada! Carta añadida.");
+                // Forzar revelado para pasar de ronda
+                db.ref(`salas/${salaActual}/estado_juego/revelar`).set(true);
             });
         }
 
@@ -200,13 +230,34 @@
             document.getElementById('zona-voto').classList.add('hidden');
         }
 
-        function procesarResultado(gano) {
+        function resolverToken(gano) {
             db.ref(`salas/${salaActual}/estado_juego/turno_de`).once('value', (s) => {
                 if(s.val() === miId && gano) {
                     misTokens++;
                     db.ref(`salas/${salaActual}/jugadores/${miId}/tokens`).set(misTokens);
                 }
             });
+        }
+
+        function mostrarPantallaFinal(ganador) {
+            const final = document.getElementById('pantalla-final');
+            const grande = document.getElementById('final-msg-grande');
+            const chico = document.getElementById('final-msg-chico');
+            const emoji = document.getElementById('final-emoji');
+            
+            final.style.display = 'flex';
+            
+            if(ganador === document.getElementById('nombreInput').value.trim()) {
+                emoji.innerText = "👑";
+                grande.innerText = "🏆 ¡GANASTE! 🏆";
+                chico.innerText = "Eres el maestro indiscutible de 'Yo me la sé'. ¡Felicidades!";
+                grande.style.color = "#1DB954";
+            } else {
+                emoji.innerText = "😢";
+                grande.innerText = "¡PERDISTE!";
+                chico.innerHTML = `El ganador es <strong>${ganador}</strong>.<br>¡Mejora ese oído para la próxima!`;
+                grande.style.color = "#f44336";
+            }
         }
     </script>
 </body>
