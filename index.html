@@ -6,37 +6,118 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         body { background: #121212; color: white; font-family: 'Segoe UI', sans-serif; text-align: center; margin: 0; overflow: hidden; }
-        .header { background: #1DB954; padding: 15px; font-size: 28px; font-weight: bold; text-transform: uppercase; }
-        .controles-tv { margin: 15px; padding: 20px; border: 2px solid #1DB954; display: inline-block; border-radius: 20px; background: #1e1e1e; min-width: 400px; }
+        .header { background: #1DB954; padding: 15px; font-size: 28px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; }
         
-        /* AVISO DE TURNO GRANDE */
-        #aviso-turno { font-size: 32px; color: gold; font-weight: bold; margin-bottom: 10px; text-shadow: 0 0 10px rgba(255,215,0,0.4); }
-        
-        .tablero { display: flex; justify-content: center; gap: 15px; padding: 15px; flex-wrap: wrap; height: 50vh; overflow-y: auto; }
-        .jugador { border: 3px solid #333; padding: 10px; border-radius: 12px; background: #252525; min-width: 200px; transition: 0.4s; position: relative; }
-        .turno-activo { border-color: #FFD700 !important; box-shadow: 0 0 20px gold; transform: scale(1.05); }
-        .linea { display: flex; gap: 5px; justify-content: center; margin-top: 8px; flex-wrap: wrap; }
-        .carta { background: #fff; color: #000; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 11px; }
-        button { padding: 12px 25px; font-size: 18px; cursor: pointer; background: #1DB954; border: none; color: white; border-radius: 50px; font-weight: bold; margin: 5px; }
+        .controles-tv { 
+            margin: 15px; 
+            padding: 20px; 
+            border: 2px solid #1DB954; 
+            display: inline-block; 
+            border-radius: 20px; 
+            background: #1e1e1e; 
+            min-width: 450px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        #aviso-turno { 
+            font-size: 32px; 
+            color: gold; 
+            font-weight: bold; 
+            margin-bottom: 10px; 
+            text-shadow: 0 0 15px rgba(255,215,0,0.5);
+            text-transform: uppercase;
+        }
+
+        .tablero { 
+            display: flex; 
+            justify-content: center; 
+            gap: 15px; 
+            padding: 15px; 
+            flex-wrap: wrap; 
+            height: 50vh; 
+            overflow-y: auto; 
+        }
+
+        .jugador { 
+            border: 3px solid #333; 
+            padding: 15px; 
+            border-radius: 15px; 
+            background: #252525; 
+            min-width: 220px; 
+            transition: 0.4s; 
+            position: relative; 
+        }
+
+        .turno-activo { 
+            border-color: #FFD700 !important; 
+            box-shadow: 0 0 25px rgba(255, 215, 0, 0.4); 
+            transform: scale(1.05); 
+            background: #2a2a2a;
+        }
+
+        .linea { display: flex; gap: 8px; justify-content: center; margin-top: 10px; flex-wrap: wrap; }
+        .carta { 
+            background: #fff; 
+            color: #000; 
+            padding: 4px 10px; 
+            border-radius: 6px; 
+            font-weight: bold; 
+            border: 2px solid #1DB954; 
+            font-size: 14px; 
+        }
+
+        button { 
+            padding: 15px 30px; 
+            font-size: 18px; 
+            cursor: pointer; 
+            background: #1DB954; 
+            border: none; 
+            color: white; 
+            border-radius: 50px; 
+            font-weight: bold; 
+            margin: 5px;
+            transition: 0.3s;
+        }
+        button:hover { transform: scale(1.05); background: #1ed760; }
+
         .btn-revelar { background: #f39c12; }
-        #reproductor-status { margin: 10px; font-size: 20px; color: #1DB954; }
-        .revelado { font-size: 35px; color: gold; font-weight: bold; margin-top: 10px; display: none; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 15px; border: 2px solid gold; }
+        .btn-revelar:hover { background: #e67e22; }
+
+        #reproductor-status { margin: 10px; font-size: 20px; color: #1DB954; font-weight: 500; }
+        
+        .revelado { 
+            font-size: 38px; 
+            color: gold; 
+            font-weight: bold; 
+            margin-top: 15px; 
+            display: none; 
+            background: rgba(0,0,0,0.85); 
+            padding: 20px; 
+            border-radius: 20px; 
+            border: 3px solid gold;
+            animation: fadeIn 0.5s;
+        }
+
         #player-invisible { position: absolute; top: -9999px; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
+
     <div class="header">🎶 Yo me la sé 🎶</div>
-    
+
     <div class="controles-tv">
         <div id="aviso-turno">ESPERANDO JUGADORES</div>
-        <div style="display: flex; gap: 15px; align-items: center; justify-content: center;">
-            <div id="qrcode" style="background:white; padding:5px; border-radius:5px;"></div>
+        
+        <div style="display: flex; gap: 20px; align-items: center; justify-content: center;">
+            <div id="qrcode" style="background:white; padding:8px; border-radius:10px;"></div>
             <div>
                 <button id="btn-principal" onclick="nuevaRonda()">INICIAR / SIGUIENTE 🚀</button>
                 <button id="btn-revelar" class="btn-revelar" style="display:none;" onclick="revelarAño()">REVELAR AÑO ✨</button>
             </div>
         </div>
-        <div id="reproductor-status">Escanea el código para unirte</div>
+
+        <div id="reproductor-status">Escanea el código para entrar a la sala</div>
         <div id="revelado-datos" class="revelado"></div>
     </div>
 
@@ -46,53 +127,90 @@
     <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-database-compat.js"></script>
     <script src="https://www.youtube.com/iframe_api"></script>
+
     <script>
-        const firebaseConfig = { apiKey: "AIzaSyA_WChhOabs671aPhX5uhX3FaLnn_YOc0c", authDomain: "party-music-3faae.firebaseapp.com", databaseURL: "https://party-music-3faae-default-rtdb.firebaseio.com", projectId: "party-music-3faae", storageBucket: "party-music-3faae.firebasestorage.app", messagingSenderId: "877613370267", appId: "1:877613370267:web:f096e520df8a350ba86f3e" };
+        // CONFIGURACIÓN FIREBASE
+        const firebaseConfig = { 
+            apiKey: "AIzaSyA_WChhOabs671aPhX5uhX3FaLnn_YOc0c", 
+            authDomain: "party-music-3faae.firebaseapp.com", 
+            databaseURL: "https://party-music-3faae-default-rtdb.firebaseio.com", 
+            projectId: "party-music-3faae", 
+            storageBucket: "party-music-3faae.firebasestorage.app", 
+            messagingSenderId: "877613370267", 
+            appId: "1:877613370267:web:f096e520df8a350ba86f3e" 
+        };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
-        let miSala = prompt("SALA:").toUpperCase() || "FIESTA";
-        db.ref(`salas/${miSala}`).remove();
 
-        new QRCode(document.getElementById("qrcode"), { text: window.location.href.replace("index.html", "") + "mando.html?sala=" + miSala, width: 80, height: 80 });
+        let miSala = prompt("NOMBRE DE LA SALA:").toUpperCase() || "FIESTA";
+        db.ref(`salas/${miSala}`).remove(); // Reiniciar sala al abrir TV
 
+        // Generar QR
+        new QRCode(document.getElementById("qrcode"), { 
+            text: window.location.href.replace("index.html", "") + "mando.html?sala=" + miSala, 
+            width: 90, 
+            height: 90 
+        });
+
+        // PLAYLIST (Se eliminan tras usarse)
         let playlist = [
             { t: "September", a: "Earth, Wind & Fire", y: 1978, idYT: "Gs069dndIYk" },
             { t: "Take On Me", a: "a-ha", y: 1984, idYT: "djV11Xbc914" },
             { t: "Beat It", a: "Michael Jackson", y: 1982, idYT: "oRdxUFDoQe0" },
             { t: "Toxic", a: "Britney Spears", y: 2003, idYT: "LOZuxwVk7TU" },
             { t: "Uptown Funk", a: "Bruno Mars", y: 2014, idYT: "OPf0YbXqDm0" },
-            { t: "Rayando El Sol", a: "Maná", y: 1990, idYT: "tcWzVUlR7Y4" }
+            { t: "Rayando El Sol", a: "Maná", y: 1990, idYT: "tcWzVUlR7Y4" },
+            { t: "Gasolina", a: "Daddy Yankee", y: 2004, idYT: "qGKrc3Vz12g" },
+            { t: "Stayin Alive", a: "Bee Gees", y: 1977, idYT: "I_izvAbhExY" }
         ];
 
         let player, indiceTurno = 0, actualId = "";
-        function onYouTubeIframeAPIReady() { player = new YT.Player('player-invisible', { height: '0', width: '0', videoId: '', playerVars: { 'autoplay': 1, 'controls': 0 } }); }
+
+        function onYouTubeIframeAPIReady() {
+            player = new YT.Player('player-invisible', {
+                height: '0', width: '0', videoId: '',
+                playerVars: { 'autoplay': 1, 'controls': 0 }
+            });
+        }
 
         function nuevaRonda() {
-            if (playlist.length === 0) return alert("¡Sin más canciones!");
-            
-            // Limpieza visual inmediata
+            if (playlist.length === 0) return alert("¡No quedan canciones en la lista!");
+
+            // 1. Limpieza visual inmediata en TV
             const rev = document.getElementById('revelado-datos');
-            rev.style.display = 'none'; rev.innerHTML = '';
+            rev.style.display = 'none';
+            rev.innerHTML = '';
+            document.getElementById('reproductor-status').innerText = "Cargando siguiente...";
 
             db.ref(`salas/${miSala}/jugadores`).once('value', (snap) => {
-                const j = snap.val(); if(!j) return;
-                
+                const j = snap.val();
+                if(!j) return alert("Esperando a que se unan jugadores...");
+
+                // 2. Procesar tokens de la ronda anterior (Votación)
                 procesarTokensRondaAnterior();
 
+                // 3. Seleccionar siguiente jugador
                 const ids = Object.keys(j);
                 actualId = ids[indiceTurno];
                 
+                // 4. Seleccionar y eliminar canción para que no repita
                 const randomIndex = Math.floor(Math.random() * playlist.length);
                 const cancion = playlist.splice(randomIndex, 1)[0]; 
 
+                // 5. Reproducir
                 if(player) player.loadVideoById(cancion.idYT);
 
+                // 6. Actualizar Base de Datos
                 db.ref(`salas/${miSala}/estado_juego`).set({
-                    fase: "JUGANDO", cancion_actual: cancion, revelar: false,
-                    turno_de: actualId, nombre_turno: j[actualId].nombre,
-                    posicion_bloqueada: -1, votos: {}
+                    fase: "JUGANDO",
+                    cancion_actual: cancion,
+                    revelar: false,
+                    turno_de: actualId,
+                    nombre_turno: j[actualId].nombre,
+                    posicion_bloqueada: -1,
+                    votos: {}
                 });
-                
+
                 document.getElementById('aviso-turno').innerText = "TURNO DE: " + j[actualId].nombre.toUpperCase();
                 indiceTurno = (indiceTurno + 1) % ids.length;
             });
@@ -100,34 +218,63 @@
 
         function procesarTokensRondaAnterior() {
             db.ref(`salas/${miSala}/estado_juego`).once('value', (s) => {
-                const e = s.val(); if(!e || !e.votos) return;
-                const v = Object.values(e.votos);
-                if(v.filter(x => x === true).length > v.length / 2) {
+                const e = s.val();
+                if(!e || !e.votos) return;
+                const votosArr = Object.values(e.votos);
+                const votosSi = votosArr.filter(v => v === true).length;
+                
+                // Si la mayoría votó que SÍ adivinó Artista/Título
+                if(votosSi > votosArr.length / 2) {
                     db.ref(`salas/${miSala}/jugadores/${e.turno_de}/tokens`).transaction(t => (t || 0) + 1);
                 }
             });
         }
 
-        function revelarAño() { db.ref(`salas/${miSala}/estado_juego/revelar`).set(true); }
+        function revelarAño() {
+            db.ref(`salas/${miSala}/estado_juego/revelar`).set(true);
+        }
 
+        // Listener para cambios de estado (TV)
         db.ref(`salas/${miSala}/estado_juego`).on('value', (snap) => {
             const e = snap.val(); if(!e) return;
-            if(e.fase === "JUGANDO") { document.getElementById('btn-revelar').style.display = 'none'; document.getElementById('btn-principal').style.display = 'inline-block'; }
-            if(e.fase === "ESPERA_ROBO") { document.getElementById('btn-principal').style.display = 'none'; document.getElementById('btn-revelar').style.display = 'inline-block'; }
-            if(e.revelar) { 
-                const rev = document.getElementById('revelado-datos');
-                rev.innerHTML = `✨ ${e.cancion_actual.y} ✨<br><small>${e.cancion_actual.t}</small>`;
-                rev.style.display = 'block'; 
+            
+            const status = document.getElementById('reproductor-status');
+            const rev = document.getElementById('revelado-datos');
+
+            if(e.fase === "JUGANDO") {
+                status.innerText = "Escuchando música...";
+                document.getElementById('btn-revelar').style.display = 'none';
+                document.getElementById('btn-principal').style.display = 'inline-block';
+            }
+            
+            if(e.fase === "ESPERA_ROBO") {
+                status.innerHTML = "⚠️ <span style='color:orange'>FASE DE ROBO ACTIVA</span>";
+                document.getElementById('btn-principal').style.display = 'none';
+                document.getElementById('btn-revelar').style.display = 'inline-block';
+            }
+
+            if(e.revelar) {
+                rev.innerHTML = `✨ ${e.cancion_actual.y} ✨<br><small style="font-size:20px">${e.cancion_actual.a} - ${e.cancion_actual.t}</small>`;
+                rev.style.display = 'block';
             }
         });
 
+        // Listener para Tablero de Jugadores
         db.ref(`salas/${miSala}/jugadores`).on('value', (snap) => {
             const data = snap.val(); if(!data) return;
             const cont = document.getElementById('tablero-jugadores');
             cont.innerHTML = "";
+            
             for (let id in data) {
                 const p = data[id];
-                cont.innerHTML += `<div class="jugador ${id === actualId ? 'turno-activo' : ''}"><h3>${p.nombre}</h3><div style="color:gold">🪙 Tokens: ${p.tokens}</div><div class="linea">${(p.linea || []).sort((a,b)=>a-b).map(a => `<div class="carta">${a}</div>`).join('')}</div></div>`;
+                cont.innerHTML += `
+                    <div class="jugador ${id === actualId ? 'turno-activo' : ''}">
+                        <h3 style="margin:0; color:#1DB954;">${p.nombre}</h3>
+                        <div style="font-size:18px; color:gold; margin:5px 0;">🪙 Tokens: ${p.tokens}</div>
+                        <div class="linea">
+                            ${(p.linea || []).sort((a,b)=>a-b).map(año => `<div class="carta">${año}</div>`).join('')}
+                        </div>
+                    </div>`;
             }
         });
     </script>
