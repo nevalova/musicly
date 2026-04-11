@@ -112,7 +112,7 @@
         <div style="display: flex; gap: 20px; align-items: center; justify-content: center;">
             <div id="qrcode" style="background:white; padding:8px; border-radius:10px;"></div>
             <div>
-                <button id="btn-principal" onclick="nuevaRonda()">INICIAR / SIGUIENTE 🚀</button>
+                <button id="btn-principal" onclick="nuevaRonda()">INICIAR JUEGO 🎮</button>
                 <button id="btn-revelar" class="btn-revelar" style="display:none;" onclick="revelarAño()">REVELAR AÑO ✨</button>
             </div>
         </div>
@@ -129,7 +129,6 @@
     <script src="https://www.youtube.com/iframe_api"></script>
 
     <script>
-        // CONFIGURACIÓN FIREBASE
         const firebaseConfig = { 
             apiKey: "AIzaSyA_WChhOabs671aPhX5uhX3FaLnn_YOc0c", 
             authDomain: "party-music-3faae.firebaseapp.com", 
@@ -143,16 +142,13 @@
         const db = firebase.database();
 
         let miSala = prompt("NOMBRE DE LA SALA:").toUpperCase() || "FIESTA";
-        db.ref(`salas/${miSala}`).remove(); // Reiniciar sala al abrir TV
+        db.ref(`salas/${miSala}`).remove();
 
-        // Generar QR
         new QRCode(document.getElementById("qrcode"), { 
             text: window.location.href.replace("index.html", "") + "mando.html?sala=" + miSala, 
-            width: 90, 
-            height: 90 
+            width: 90, height: 90 
         });
 
-        // PLAYLIST (Se eliminan tras usarse)
         let playlist = [
             { t: "September", a: "Earth, Wind & Fire", y: 1978, idYT: "Gs069dndIYk" },
             { t: "Take On Me", a: "a-ha", y: 1984, idYT: "djV11Xbc914" },
@@ -160,11 +156,10 @@
             { t: "Toxic", a: "Britney Spears", y: 2003, idYT: "LOZuxwVk7TU" },
             { t: "Uptown Funk", a: "Bruno Mars", y: 2014, idYT: "OPf0YbXqDm0" },
             { t: "Rayando El Sol", a: "Maná", y: 1990, idYT: "tcWzVUlR7Y4" },
-            { t: "Gasolina", a: "Daddy Yankee", y: 2004, idYT: "qGKrc3Vz12g" },
-            { t: "Stayin Alive", a: "Bee Gees", y: 1977, idYT: "I_izvAbhExY" }
+            { t: "Gasolina", a: "Daddy Yankee", y: 2004, idYT: "qGKrc3Vz12g" }
         ];
 
-        let player, indiceTurno = 0, actualId = "";
+        let player, indiceTurno = 0, actualId = "", juegoIniciado = false;
 
         function onYouTubeIframeAPIReady() {
             player = new YT.Player('player-invisible', {
@@ -174,33 +169,30 @@
         }
 
         function nuevaRonda() {
-            if (playlist.length === 0) return alert("¡No quedan canciones en la lista!");
-
-            // 1. Limpieza visual inmediata en TV
+            if (playlist.length === 0) return alert("¡Sin canciones!");
+            
             const rev = document.getElementById('revelado-datos');
             rev.style.display = 'none';
             rev.innerHTML = '';
-            document.getElementById('reproductor-status').innerText = "Cargando siguiente...";
 
             db.ref(`salas/${miSala}/jugadores`).once('value', (snap) => {
                 const j = snap.val();
-                if(!j) return alert("Esperando a que se unan jugadores...");
+                if(!j) return alert("Esperando jugadores...");
 
-                // 2. Procesar tokens de la ronda anterior (Votación)
                 procesarTokensRondaAnterior();
 
-                // 3. Seleccionar siguiente jugador
                 const ids = Object.keys(j);
                 actualId = ids[indiceTurno];
                 
-                // 4. Seleccionar y eliminar canción para que no repita
                 const randomIndex = Math.floor(Math.random() * playlist.length);
                 const cancion = playlist.splice(randomIndex, 1)[0]; 
 
-                // 5. Reproducir
                 if(player) player.loadVideoById(cancion.idYT);
 
-                // 6. Actualizar Base de Datos
+                // Cambiar nombre del botón tras el primer clic
+                juegoIniciado = true;
+                document.getElementById('btn-principal').innerText = "SIGUIENTE RONDA ➡️";
+
                 db.ref(`salas/${miSala}/estado_juego`).set({
                     fase: "JUGANDO",
                     cancion_actual: cancion,
@@ -220,51 +212,47 @@
             db.ref(`salas/${miSala}/estado_juego`).once('value', (s) => {
                 const e = s.val();
                 if(!e || !e.votos) return;
-                const votosArr = Object.values(e.votos);
-                const votosSi = votosArr.filter(v => v === true).length;
-                
-                // Si la mayoría votó que SÍ adivinó Artista/Título
-                if(votosSi > votosArr.length / 2) {
+                const v = Object.values(e.votos);
+                if(v.filter(x => x === true).length > v.length / 2) {
                     db.ref(`salas/${miSala}/jugadores/${e.turno_de}/tokens`).transaction(t => (t || 0) + 1);
                 }
             });
         }
 
-        function revelarAño() {
-            db.ref(`salas/${miSala}/estado_juego/revelar`).set(true);
-        }
+        function revelarAño() { db.ref(`salas/${miSala}/estado_juego/revelar`).set(true); }
 
-        // Listener para cambios de estado (TV)
         db.ref(`salas/${miSala}/estado_juego`).on('value', (snap) => {
             const e = snap.val(); if(!e) return;
-            
             const status = document.getElementById('reproductor-status');
             const rev = document.getElementById('revelado-datos');
+            const btnP = document.getElementById('btn-principal');
+            const btnR = document.getElementById('btn-revelar');
 
             if(e.fase === "JUGANDO") {
-                status.innerText = "Escuchando música...";
-                document.getElementById('btn-revelar').style.display = 'none';
-                document.getElementById('btn-principal').style.display = 'inline-block';
+                status.innerText = "Escuchando...";
+                btnR.style.display = 'none';
+                btnP.style.display = 'inline-block';
             }
             
             if(e.fase === "ESPERA_ROBO") {
-                status.innerHTML = "⚠️ <span style='color:orange'>FASE DE ROBO ACTIVA</span>";
-                document.getElementById('btn-principal').style.display = 'none';
-                document.getElementById('btn-revelar').style.display = 'inline-block';
+                status.innerHTML = "⚠️ <span style='color:orange'>ESPERANDO COLOCACIÓN / ROBO</span>";
+                btnP.style.display = 'none';
+                btnR.style.display = 'inline-block';
             }
 
             if(e.revelar) {
                 rev.innerHTML = `✨ ${e.cancion_actual.y} ✨<br><small style="font-size:20px">${e.cancion_actual.a} - ${e.cancion_actual.t}</small>`;
                 rev.style.display = 'block';
+                // El botón Siguiente vuelve a aparecer tras revelar
+                btnR.style.display = 'none';
+                btnP.style.display = 'inline-block';
             }
         });
 
-        // Listener para Tablero de Jugadores
         db.ref(`salas/${miSala}/jugadores`).on('value', (snap) => {
             const data = snap.val(); if(!data) return;
             const cont = document.getElementById('tablero-jugadores');
             cont.innerHTML = "";
-            
             for (let id in data) {
                 const p = data[id];
                 cont.innerHTML += `
