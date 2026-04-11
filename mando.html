@@ -160,4 +160,166 @@
         }
     </script>
 </body>
+</html><!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mando</title>
+    <style>
+        body { background: #121212; color: white; font-family: sans-serif; text-align: center; padding: 10px; margin: 0; }
+        .card { background: #1e1e1e; padding: 12px; border-radius: 12px; margin-bottom: 8px; border: 1px solid #333; }
+        button { padding: 15px; border-radius: 50px; border: none; font-weight: bold; width: 100%; font-size: 14px; text-transform: uppercase; margin: 5px 0; }
+        .btn-green { background: #1DB954; color: white; }
+        .btn-red { background: #f44336; color: white; }
+        .btn-blue { background: #2196F3; color: white; border: 2px solid gold; box-shadow: 0 0 10px gold; }
+        .btn-grey { background: #444; color: white; }
+        .bloqueado { background: #b71c1c !important; opacity: 0.5; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <div id="setup" class="card">
+        <input type="text" id="salaI" placeholder="SALA" style="padding:10px; margin:5px; text-align:center;">
+        <input type="text" id="nombreI" placeholder="TU NOMBRE" style="padding:10px; margin:5px; text-align:center;">
+        <button class="btn-green" onclick="unirme()">ENTRAR</button>
+    </div>
+    <div id="juego" class="hidden">
+        <div class="card" style="display:flex; justify-content:space-around;">
+            <div>🪙 <span id="tokensV">--</span></div>
+            <div>🎴 <span id="cartasV">--</span></div>
+        </div>
+
+        <button id="btn-hitster" class="btn-blue hidden" onclick="comprarCarta()">¡YO ME LA SÉ! (3 Tokens) ⚡</button>
+
+        <div class="card" id="status-msg">Esperando...</div>
+        <div id="zona-posicion" class="card hidden"></div>
+        <div id="zona-robo" class="hidden card">
+            <button class="btn-red" onclick="intentarRobar()">ROBAR (1 Token) 🎯</button>
+        </div>
+        <div id="zona-voto" class="hidden card">
+            <p>¿Adivinó artista/título?</p>
+            <button class="btn-green" onclick="votar(true)">SÍ 👍</button>
+            <button class="btn-red" onclick="votar(false)">NO 👎</button>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-database-compat.js"></script>
+    <script>
+        const firebaseConfig = { apiKey: "AIzaSyA_WChhOabs671aPhX5uhX3FaLnn_YOc0c", authDomain: "party-music-3faae.firebaseapp.com", databaseURL: "https://party-music-3faae-default-rtdb.firebaseio.com", projectId: "party-music-3faae", storageBucket: "party-music-3faae.firebasestorage.app", messagingSenderId: "877613370267", appId: "1:877613370267:web:f096e520df8a350ba86f3e" };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        let miId, misT, miL, salaA, pend = null;
+
+        function unirme() {
+            salaA = document.getElementById('salaI').value.toUpperCase();
+            miId = "p_" + Date.now();
+            db.ref(`salas/${salaA}/jugadores/${miId}`).set({ nombre: document.getElementById('nombreI').value, tokens: 3, linea: [2000] });
+            document.getElementById('setup').classList.add('hidden');
+            document.getElementById('juego').classList.remove('hidden');
+            escuchar();
+        }
+
+        function escuchar() {
+            db.ref(`salas/${salaA}/estado_juego`).on('value', (snap) => {
+                const e = snap.val(); if(!e) return;
+                
+                // Lógica de visibilidad del botón Hitster (3 tokens)
+                const btnH = document.getElementById('btn-hitster');
+                if(e.fase === "JUGANDO" && e.turno_de === miId && misT >= 3) {
+                    btnH.classList.remove('hidden');
+                } else {
+                    btnH.classList.add('hidden');
+                }
+
+                if(e.fase === "JUGANDO") {
+                    document.getElementById('zona-voto').classList.add('hidden');
+                    document.getElementById('zona-robo').classList.add('hidden');
+                    if(e.turno_de === miId) { 
+                        document.getElementById('status-msg').innerText = "⭐ TU TURNO"; 
+                        dibujarL(miL, -1); 
+                    } else { 
+                        document.getElementById('status-msg').innerText = "Turno de " + e.nombre_turno; 
+                        document.getElementById('zona-posicion').classList.add('hidden'); 
+                    }
+                }
+                
+                if(e.fase === "ESPERA_ROBO") {
+                    document.getElementById('zona-posicion').classList.add('hidden');
+                    if(e.turno_de !== miId) { 
+                        document.getElementById('status-msg').innerText = "¡Oportunidad de ROBO!"; 
+                        document.getElementById('zona-robo').classList.remove('hidden'); 
+                    }
+                }
+
+                if(e.revelar) {
+                    document.getElementById('zona-robo').classList.add('hidden');
+                    if(pend) { miL.push(pend); db.ref(`salas/${salaA}/jugadores/${miId}/linea`).set(miL); pend = null; }
+                    if(e.turno_de !== miId) document.getElementById('zona-voto').classList.remove('hidden');
+                }
+            });
+            db.ref(`salas/${salaA}/jugadores/${miId}`).on('value', s => { 
+                if(s.val()){ 
+                    misT=s.val().tokens; 
+                    miL=s.val().linea||[2000]; 
+                    document.getElementById('tokensV').innerText=misT; 
+                    document.getElementById('cartasV').innerText=miL.length;
+                } 
+            });
+        }
+
+        function dibujarL(linea, bloqIdx) {
+            const cont = document.getElementById('zona-posicion');
+            cont.classList.remove('hidden'); cont.innerHTML = "";
+            let años = [...new Set(linea)].sort((a,b)=>a-b);
+            for(let i=0; i<=años.length; i++) {
+                let cl = (i === bloqIdx) ? "bloqueado" : "btn-grey";
+                let click = (i === bloqIdx) ? "" : `onclick="colocar(${i}, ${JSON.stringify(años)})"`;
+                cont.innerHTML += `<button class="${cl}" ${click}>${i === bloqIdx ? "OCUPADO" : "ELEGIR"}</button>`;
+                if(i < años.length) cont.innerHTML += `<div>📅 ${años[i]}</div>`;
+            }
+        }
+
+        function intentarRobar() {
+            if(misT < 1) return;
+            db.ref(`salas/${salaA}/estado_juego`).once('value', (se) => {
+                const e = se.val();
+                db.ref(`salas/${salaA}/jugadores/${e.turno_de}/linea`).once('value', (sl) => {
+                    dibujarL(sl.val(), e.posicion_bloqueada);
+                    document.getElementById('zona-robo').classList.add('hidden');
+                    db.ref(`salas/${salaA}/jugadores/${miId}/tokens`).transaction(t => t - 1);
+                });
+            });
+        }
+
+        function colocar(idx, lista) {
+            document.getElementById('zona-posicion').classList.add('hidden');
+            db.ref(`salas/${salaA}/estado_juego/cancion_actual`).once('value', (s) => {
+                const y = s.val().y;
+                if(y >= (idx === 0 ? 0 : lista[idx-1]) && y <= (idx === lista.length ? 3000 : lista[idx])) pend = y;
+                db.ref(`salas/${salaA}/estado_juego/turno_de`).once('value', st => {
+                    if(st.val() === miId) {
+                        db.ref(`salas/${salaA}/estado_juego/posicion_bloqueada`).set(idx);
+                        db.ref(`salas/${salaA}/estado_juego/fase`).set("ESPERA_ROBO");
+                    }
+                });
+            });
+        }
+
+        function comprarCarta() {
+            db.ref(`salas/${salaA}/jugadores/${miId}/tokens`).transaction(t => t - 3);
+            db.ref(`salas/${salaA}/estado_juego/cancion_actual`).once('value', (s) => {
+                miL.push(s.val().y);
+                db.ref(`salas/${salaA}/jugadores/${miId}/linea`).set(miL);
+                db.ref(`salas/${salaA}/estado_juego/revelar`).set(true);
+            });
+        }
+
+        function votar(v) { 
+            db.ref(`salas/${salaA}/estado_juego/votos/${miId}`).set(v); 
+            document.getElementById('zona-voto').classList.add('hidden');
+        }
+    </script>
+</body>
 </html>
