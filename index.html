@@ -2,9 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Yo Me La Sé - TV Mode</title>
-    
     <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-database-compat.js"></script>
     <script src="https://www.youtube.com/iframe_api"></script>
@@ -12,56 +10,21 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
 
     <style>
-        body {
-            margin: 0; background: #000; color: white;
-            font-family: 'Inter', sans-serif; height: 100vh;
-            display: flex; flex-direction: column; align-items: center; overflow: hidden;
-        }
+        body { margin: 0; background: #000; color: white; font-family: 'Inter', sans-serif; height: 100vh; display: flex; flex-direction: column; align-items: center; overflow: hidden; }
+        #yt-player-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; filter: blur(40px) brightness(0.4); transform: scale(1.2); }
+        .main-container { z-index: 10; width: 90%; max-width: 1000px; text-align: center; margin-top: 20px; }
+        .glass-panel { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 40px; padding: 30px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        .sala-tag { background: #1DB954; color: black; font-weight: 900; padding: 5px 20px; border-radius: 50px; display: inline-block; margin-bottom: 10px; }
+        
+        /* PANEL DE CONTROL (LO JUGABLE) */
+        .admin-panel { margin-top: 20px; background: rgba(0,0,0,0.6); padding: 20px; border-radius: 20px; border: 1px dashed #555; }
+        .btn-admin { background: #1DB954; color: white; border: none; padding: 10px 20px; border-radius: 10px; font-weight: bold; cursor: pointer; margin: 5px; }
+        .btn-next { background: #2196F3; }
 
-        #yt-player-container {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            z-index: -1; pointer-events: none;
-            filter: blur(40px) brightness(0.4); transform: scale(1.2);
-        }
-
-        .main-container { z-index: 10; width: 90%; max-width: 1000px; text-align: center; margin-top: 50px; }
-
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 40px;
-            padding: 40px; box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-        }
-
-        .neon-text { text-shadow: 0 0 20px rgba(255,255,255,0.6); font-size: 4rem; font-weight: 900; margin-bottom: 10px; }
-
-        /* Estilo para mostrar la sala */
-        .sala-tag {
-            background: #1DB954; color: black; font-weight: 900;
-            padding: 5px 20px; border-radius: 50px; display: inline-block;
-            margin-bottom: 20px; font-size: 1.2rem;
-        }
-
-        #qr-canvas { background: white; padding: 10px; border-radius: 15px; margin-top: 10px; }
-
-        #revelado-datos {
-            display: none; margin-top: 30px; padding-top: 30px;
-            border-top: 1px solid rgba(255,255,255,0.2); animation: fadeIn 0.6s ease;
-        }
-
-        #contenedor-jugadores {
-            display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; margin-top: 40px;
-        }
-
-        .card-jugador {
-            background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 20px; padding: 15px; min-width: 120px; transition: 0.3s;
-        }
-
-        .card-jugador.activo {
-            border-color: #1DB954; transform: scale(1.1);
-            box-shadow: 0 0 15px rgba(29, 185, 84, 0.4);
-        }
-
+        #revelado-datos { display: none; margin-top: 20px; animation: fadeIn 0.6s ease; }
+        #contenedor-jugadores { display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; margin-top: 30px; }
+        .card-jugador { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; padding: 15px; min-width: 110px; }
+        .card-jugador.activo { border-color: #1DB954; background: rgba(29, 185, 84, 0.1); transform: scale(1.05); }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
 </head>
@@ -70,18 +33,22 @@
     <div id="yt-player-container"><div id="player"></div></div>
 
     <div class="main-container">
-        <h1 class="neon-text">YO ME LA SÉ</h1>
+        <div class="sala-tag">SALA: <span id="display-sala-id">---</span></div>
         
-        <div class="sala-tag">CÓDIGO SALA: <span id="display-sala-id">---</span></div>
-
         <div class="glass-panel">
-            <h2 id="instruccion">ESCANEEN PARA JUGAR</h2>
-            <div id="qr-container"><canvas id="qr-canvas"></canvas></div>
+            <h2 id="instruccion">CARGA LAS CANCIONES PARA EMPEZAR</h2>
             
+            <div id="qr-container"><canvas id="qr-canvas"></canvas></div>
+
             <div id="revelado-datos">
-                <h1 id="display-year" style="font-size: 6rem; margin: 0; color: #FFD700;">----</h1>
+                <h1 id="display-year" style="font-size: 5rem; margin: 0; color: #FFD700;">----</h1>
                 <h2 id="display-song">Título</h2>
                 <h3 id="display-artist" style="opacity: 0.7;">Artista</h3>
+            </div>
+
+            <div class="admin-panel" id="panel-admin">
+                <button class="btn-admin" onclick="iniciarJuego()">🚀 INICIAR / SIGUIENTE RONDA</button>
+                <button class="btn-admin btn-next" onclick="revelar()">👁️ REVELAR AHORA</button>
             </div>
         </div>
 
@@ -101,82 +68,101 @@
 
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
-        
-        // --- CONFIGURA AQUÍ TU SALA ---
-        const salaID = "PARTY77"; // Este es el código que verás en la tele
+        const salaID = "PARTY77"; 
         document.getElementById('display-sala-id').innerText = salaID;
 
-        // QR
-        const path = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
-        const urlMando = window.location.origin + path + "mando.html";
-        new QRious({ element: document.getElementById('qr-canvas'), value: urlMando, size: 180 });
+        // Lista de canciones (Puedes añadir más aquí)
+        const listaCanciones = [
+            { idYT: "kJQP7kiw5Fk", t: "Despacito", a: "Luis Fonsi", y: 2017 },
+            { idYT: "LHCob76kigA", t: "As It Was", a: "Harry Styles", y: 2022 },
+            { idYT: "fLexgOxsZu0", t: "Be My Baby", a: "The Ronettes", y: 1963 }
+        ];
 
-        let player;
-        let cancionActual = "";
+        let player, cancionActualId = "";
+        let listaJugadores = [];
 
         function onYouTubeIframeAPIReady() {
             player = new YT.Player('player', {
                 height: '100%', width: '100%',
-                playerVars: { 'autoplay': 1, 'controls': 0, 'modestbranding': 1, 'rel': 0 }
+                playerVars: { 'autoplay': 1, 'controls': 0, 'modestbranding': 1 }
             });
         }
 
-        // Inicializar la sala en la DB para despertar a los mandos
-        db.ref(`salas/${salaID}/estado_juego`).update({ fase: "ESPERA", revelar: false });
+        // --- LÓGICA DE JUEGO (BOTONES) ---
 
-        // Escuchar Jugadores
+        function iniciarJuego() {
+            if (listaJugadores.length === 0) return alert("Esperando a que se unan jugadores...");
+            
+            const randomC = listaCanciones[Math.floor(Math.random() * listaCanciones.length)];
+            const randomJ = listaJugadores[Math.floor(Math.random() * listaJugadores.length)];
+
+            db.ref(`salas/${salaID}/estado_juego`).set({
+                fase: "JUGANDO",
+                cancion_actual: randomC,
+                turno_de: randomJ.id,
+                nombre_turno: randomJ.nombre,
+                revelar: false,
+                posicion_bloqueada: -1
+            });
+        }
+
+        function revelar() {
+            db.ref(`salas/${salaID}/estado_juego/revelar`).set(true);
+        }
+
+        // --- SINCRONIZACIÓN ---
+
         db.ref(`salas/${salaID}/jugadores`).on('value', snap => {
             const container = document.getElementById('contenedor-jugadores');
             const jugadores = snap.val();
             container.innerHTML = "";
+            listaJugadores = [];
             if(!jugadores) return;
 
             db.ref(`salas/${salaID}/estado_juego/turno_de`).once('value', tSnap => {
                 const turnoDe = tSnap.val();
                 for (let id in jugadores) {
-                    const j = jugadores[id];
+                    listaJugadores.push({ id, nombre: jugadores[id].nombre });
+                    const esSuTurno = (id === turnoDe);
                     container.innerHTML += `
-                        <div class="card-jugador ${id === turnoDe ? 'activo' : ''}">
-                            <div style="font-size: 1.5rem; font-weight: 900;">${j.linea ? j.linea.length : 0} 🎴</div>
-                            <div style="font-weight: 700;">${j.nombre}</div>
-                            <div style="color: #1DB954;">${j.tokens} 🪙</div>
+                        <div class="card-jugador ${esSuTurno ? 'activo' : ''}">
+                            <div style="font-size: 1.5rem; font-weight: 900;">${jugadores[id].linea ? jugadores[id].linea.length : 0} 🎴</div>
+                            <div>${jugadores[id].nombre}</div>
+                            <div style="color: #1DB954;">${jugadores[id].tokens} 🪙</div>
                         </div>`;
                 }
             });
         });
 
-        // Escuchar Juego
         db.ref(`salas/${salaID}/estado_juego`).on('value', snap => {
             const e = snap.val();
             if (!e) return;
 
-            if (e.fase === 'JUGANDO' && e.cancion_actual) {
-                document.getElementById('instruccion').innerText = "🎶 TURNO DE: " + (e.nombre_turno || "Alguien");
+            if (e.fase === 'JUGANDO') {
+                document.getElementById('instruccion').innerText = "🎶 " + e.nombre_turno.toUpperCase() + " ESTÁ PENSANDO...";
                 document.getElementById('qr-container').style.display = "none";
                 document.getElementById('revelado-datos').style.display = "none";
-                
-                if (cancionActual !== e.cancion_actual.idYT) {
-                    cancionActual = e.cancion_actual.idYT;
-                    if(player && player.loadVideoById) player.loadVideoById(cancionActual);
+                if (cancionActualId !== e.cancion_actual.idYT) {
+                    cancionActualId = e.cancion_actual.idYT;
+                    if(player && player.loadVideoById) player.loadVideoById(cancionActualId);
                 }
             }
 
-            if (e.revelar && e.cancion_actual) {
-                document.getElementById('instruccion').innerText = "¡RESPUESTA!";
+            if (e.revelar) {
+                document.getElementById('revelado-datos').style.display = "block";
                 document.getElementById('display-year').innerText = e.cancion_actual.y;
                 document.getElementById('display-song').innerText = e.cancion_actual.t;
                 document.getElementById('display-artist').innerText = e.cancion_actual.a;
-                document.getElementById('revelado-datos').style.display = "block";
                 if(player) player.pauseVideo();
             }
-
-            if (e.fase === 'ESPERA') {
-                document.getElementById('instruccion').innerText = "ESCANEEN PARA JUGAR";
-                document.getElementById('qr-container').style.display = "block";
-                document.getElementById('revelado-datos').style.display = "none";
-                if(player) player.stopVideo();
-            }
         });
+
+        // Generar QR inicial
+        const path = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
+        new QRious({ element: document.getElementById('qr-canvas'), value: window.location.origin + path + "mando.html", size: 180 });
+        
+        // Despertar DB
+        db.ref(`salas/${salaID}/estado_juego`).update({ fase: "ESPERA" });
     </script>
 </body>
 </html>
