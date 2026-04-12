@@ -2,81 +2,83 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Yo me la sé - TV Central</title>
+    <title>Yo me la sé - TV Mode</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        body { background: #121212; color: white; font-family: 'Segoe UI', sans-serif; text-align: center; margin: 0; overflow: hidden; }
-        .header { background: #1DB954; padding: 15px; font-size: 28px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; }
+        body { background: #121212; color: white; font-family: sans-serif; text-align: center; margin: 0; }
+        
+        /* Contenedor del Reproductor para que la TV lo acepte */
+        #player-container { 
+            position: fixed; bottom: 10px; right: 10px; 
+            width: 200px; height: 120px; border: 2px solid #333; z-index: 100;
+            background: black;
+        }
+
+        .header { background: #1DB954; padding: 15px; font-size: 24px; font-weight: bold; }
+        
+        #setup-tv { padding: 50px; }
+        input { padding: 15px; font-size: 20px; width: 300px; border-radius: 10px; border: none; }
         
         .controles-tv { 
-            margin: 15px; padding: 20px; border: 2px solid #1DB954; 
-            display: inline-block; border-radius: 20px; background: #1e1e1e; 
-            min-width: 450px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            margin: 20px; padding: 20px; border: 2px solid #1DB954; 
+            display: inline-block; border-radius: 20px; background: #1e1e1e; min-width: 80%;
         }
 
-        #aviso-turno { 
-            font-size: 32px; color: gold; font-weight: bold; margin-bottom: 10px; 
-            text-shadow: 0 0 15px rgba(255,215,0,0.5); text-transform: uppercase;
-        }
-
-        .tablero { display: flex; justify-content: center; gap: 15px; padding: 15px; flex-wrap: wrap; height: 50vh; overflow-y: auto; }
-
-        .jugador { 
-            border: 3px solid #333; padding: 15px; border-radius: 15px; 
-            background: #252525; min-width: 220px; transition: 0.4s; position: relative; 
-        }
-
-        .turno-activo { 
-            border-color: #FFD700 !important; box-shadow: 0 0 25px rgba(255, 215, 0, 0.4); 
-            transform: scale(1.05); background: #2a2a2a;
-        }
-
-        .linea { display: flex; gap: 8px; justify-content: center; margin-top: 10px; flex-wrap: wrap; }
-        .carta { background: #fff; color: #000; padding: 4px 10px; border-radius: 6px; font-weight: bold; border: 2px solid #1DB954; font-size: 14px; }
+        #aviso-turno { font-size: 30px; color: gold; margin-bottom: 10px; }
+        .tablero { display: flex; justify-content: center; gap: 15px; padding: 15px; flex-wrap: wrap; }
+        .jugador { border: 2px solid #333; padding: 15px; border-radius: 15px; min-width: 180px; }
+        .turno-activo { border-color: gold; transform: scale(1.05); }
 
         button { 
-            padding: 15px 30px; font-size: 18px; cursor: pointer; background: #1DB954; 
-            border: none; color: white; border-radius: 50px; font-weight: bold; margin: 5px; transition: 0.3s;
+            padding: 20px 40px; font-size: 22px; cursor: pointer; background: #1DB954; 
+            border: none; color: white; border-radius: 50px; font-weight: bold;
         }
-        button:hover { transform: scale(1.05); background: #1ed760; }
         .btn-revelar { background: #f39c12; }
-
-        #reproductor-status { margin: 10px; font-size: 20px; color: #1DB954; font-weight: 500; }
+        .hidden { display: none !important; }
         
-        .revelado { 
-            font-size: 38px; color: gold; font-weight: bold; margin-top: 15px; 
-            display: none; background: rgba(0,0,0,0.85); padding: 20px; 
-            border-radius: 20px; border: 3px solid gold; animation: fadeIn 0.5s;
+        #revelado-datos { 
+            font-size: 35px; color: gold; background: rgba(0,0,0,0.9); 
+            padding: 20px; border-radius: 20px; border: 3px solid gold;
+            margin: 10px; display: none;
         }
-
-        #player-invisible { position: absolute; top: -9999px; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
 
-    <div class="header">🎶 Yo me la sé 🎶</div>
-
-    <div class="controles-tv">
-        <div id="aviso-turno">ESPERANDO JUGADORES</div>
-        <div style="display: flex; gap: 20px; align-items: center; justify-content: center;">
-            <div id="qrcode" style="background:white; padding:8px; border-radius:10px;"></div>
-            <div>
-                <button id="btn-principal" onclick="nuevaRonda()">INICIAR JUEGO 🎮</button>
-                <button id="btn-revelar" class="btn-revelar" style="display:none;" onclick="revelarAño()">REVELAR AÑO ✨</button>
-            </div>
-        </div>
-        <div id="reproductor-status">Escanea el código para entrar</div>
-        <div id="revelado-datos" class="revelado"></div>
+    <div id="setup-tv">
+        <h1 style="color: #1DB954;">CONFIGURACIÓN DE SALA</h1>
+        <p>Escribe el nombre de la sala usando el control o un teclado:</p>
+        <input type="text" id="salaInput" placeholder="EJ: FIESTA77">
+        <br><br>
+        <button onclick="iniciarSala()">CREAR SALA ✅</button>
     </div>
 
-    <div id="player-invisible"></div>
-    <div id="tablero-jugadores" class="tablero"></div>
+    <div id="juego-tv" class="hidden">
+        <div class="header" id="display-sala">SALA: --</div>
+        <div class="controles-tv">
+            <div id="aviso-turno">ESPERANDO JUGADORES...</div>
+            <div style="display: flex; justify-content: center; align-items: center; gap: 30px;">
+                <div id="qrcode" style="background:white; padding:10px; border-radius:10px;"></div>
+                <div>
+                    <button id="btn-principal" onclick="nuevaRonda()">SIGUIENTE CANCIÓN ➡️</button>
+                    <button id="btn-revelar" class="btn-revelar hidden" onclick="revelarAño()">REVELAR AÑO ✨</button>
+                </div>
+            </div>
+            <div id="revelado-datos"></div>
+        </div>
+        <div id="tablero-jugadores" class="tablero"></div>
+    </div>
+
+    <div id="player-container">
+        <div id="player-visible"></div>
+    </div>
 
     <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-database-compat.js"></script>
     <script src="https://www.youtube.com/iframe_api"></script>
-    <script src="canciones.js"></script> <script>
+    <script src="canciones.js?v=1.2"></script>
+
+    <script>
         const firebaseConfig = { 
             apiKey: "AIzaSyA_WChhOabs671aPhX5uhX3FaLnn_YOc0c", 
             authDomain: "party-music-3faae.firebaseapp.com", 
@@ -89,123 +91,103 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        let miSala = prompt("NOMBRE DE LA SALA:").toUpperCase() || "FIESTA";
-        db.ref(`salas/${miSala}`).remove();
+        let miSala = "";
+        let playlist = [];
+        let player, indiceTurno = 0, actualId = "";
 
-        new QRCode(document.getElementById("qrcode"), { 
-            text: window.location.href.replace("index.html", "") + "mando.html?sala=" + miSala, 
-            width: 90, height: 90 
-        });
+        function iniciarSala() {
+            miSala = document.getElementById('salaInput').value.toUpperCase().trim();
+            if(!miSala) return alert("Escribe un nombre");
+            
+            document.getElementById('setup-tv').classList.add('hidden');
+            document.getElementById('juego-tv').classList.remove('hidden');
+            document.getElementById('display-sala').innerText = "SALA: " + miSala;
 
-        // Copiamos la lista del archivo externo para poder borrar elementos sin romper el original
-        let playlist = [...listaCancionesBase]; 
-        let player, indiceTurno = 0, actualId = "", juegoIniciado = false;
+            db.ref(`salas/${miSala}`).remove(); // Limpiar sala vieja
+
+            new QRCode(document.getElementById("qrcode"), { 
+                text: window.location.href.replace("index.html", "") + "mando.html?sala=" + miSala, 
+                width: 120, height: 120 
+            });
+
+            playlist = [...listaCancionesBase];
+            escucharCambios();
+        }
 
         function onYouTubeIframeAPIReady() {
-            player = new YT.Player('player-invisible', {
-                height: '0', width: '0', videoId: '',
-                playerVars: { 'autoplay': 1, 'controls': 0 }
+            player = new YT.Player('player-visible', {
+                height: '120', width: '200', videoId: '',
+                playerVars: { 'autoplay': 1, 'controls': 0, 'origin': window.location.origin }
             });
         }
 
         function nuevaRonda() {
-            if (playlist.length === 0) return alert("¡Te has quedado sin canciones!");
+            if (playlist.length === 0) playlist = [...listaCancionesBase];
             
-            // Limpieza inmediata
-            const rev = document.getElementById('revelado-datos');
-            rev.style.display = 'none';
-            rev.innerHTML = '';
-
             db.ref(`salas/${miSala}/jugadores`).once('value', (snap) => {
                 const j = snap.val();
-                if(!j) return alert("No hay jugadores en la sala");
-
-                procesarTokensRondaAnterior();
+                if(!j) return alert("¡Necesitas jugadores!");
 
                 const ids = Object.keys(j);
                 actualId = ids[indiceTurno];
-                
-                const randomIndex = Math.floor(Math.random() * playlist.length);
-                const cancion = playlist.splice(randomIndex, 1)[0]; 
+                const cancion = playlist.splice(Math.floor(Math.random() * playlist.length), 1)[0]; 
 
                 if(player) player.loadVideoById(cancion.idYT);
 
-                juegoIniciado = true;
-                document.getElementById('btn-principal').innerText = "SIGUIENTE RONDA ➡️";
-
                 db.ref(`salas/${miSala}/estado_juego`).set({
-                    fase: "JUGANDO",
-                    cancion_actual: cancion,
-                    revelar: false,
-                    turno_de: actualId,
-                    nombre_turno: j[actualId].nombre,
-                    posicion_bloqueada: -1,
-                    votos: {}
+                    fase: "JUGANDO", cancion_actual: cancion, revelar: false,
+                    turno_de: actualId, nombre_turno: j[actualId].nombre, votos: {}
                 });
 
-                document.getElementById('aviso-turno').innerText = "TURNO DE: " + j[actualId].nombre.toUpperCase();
                 indiceTurno = (indiceTurno + 1) % ids.length;
-            });
-        }
-
-        function procesarTokensRondaAnterior() {
-            db.ref(`salas/${miSala}/estado_juego`).once('value', (s) => {
-                const e = s.val();
-                if(!e || !e.votos) return;
-                const v = Object.values(e.votos);
-                if(v.filter(x => x === true).length > v.length / 2) {
-                    db.ref(`salas/${miSala}/jugadores/${e.turno_de}/tokens`).transaction(t => (t || 0) + 1);
-                }
             });
         }
 
         function revelarAño() { db.ref(`salas/${miSala}/estado_juego/revelar`).set(true); }
 
-        db.ref(`salas/${miSala}/estado_juego`).on('value', (snap) => {
-            const e = snap.val(); if(!e) return;
-            const status = document.getElementById('reproductor-status');
-            const rev = document.getElementById('revelado-datos');
-            const btnP = document.getElementById('btn-principal');
-            const btnR = document.getElementById('btn-revelar');
+        function escucharCambios() {
+            db.ref(`salas/${miSala}/estado_juego`).on('value', (snap) => {
+                const e = snap.val(); if(!e) return;
+                const rev = document.getElementById('revelado-datos');
+                const btnP = document.getElementById('btn-principal');
+                const btnR = document.getElementById('btn-revelar');
 
-            if(e.fase === "JUGANDO") {
-                status.innerText = "Escuchando...";
-                btnR.style.display = 'none';
-                btnP.style.display = 'inline-block';
-            }
-            
-            if(e.fase === "ESPERA_ROBO") {
-                status.innerHTML = "⚠️ <span style='color:orange'>ESPERANDO RESPUESTA</span>";
-                btnP.style.display = 'none';
-                btnR.style.display = 'inline-block';
-            }
+                if(e.fase === "JUGANDO") {
+                    rev.style.display = 'none';
+                    btnR.classList.add('hidden');
+                    btnP.classList.remove('hidden');
+                    document.getElementById('aviso-turno').innerText = "TURNO DE: " + e.nombre_turno.toUpperCase();
+                }
+                
+                if(e.fase === "ESPERA_ROBO") {
+                    btnP.classList.add('hidden');
+                    btnR.classList.remove('hidden');
+                }
 
-            if(e.revelar) {
-                rev.innerHTML = `✨ ${e.cancion_actual.y} ✨<br><small style="font-size:20px">${e.cancion_actual.a} - ${e.cancion_actual.t}</small>`;
-                rev.style.display = 'block';
-                // Liberar el botón Siguiente tras revelar
-                btnR.style.display = 'none';
-                btnP.style.display = 'inline-block';
-                status.innerText = "Ronda terminada.";
-            }
-        });
+                if(e.revelar) {
+                    rev.innerHTML = `✨ ${e.cancion_actual.y} ✨<br><small>${e.cancion_actual.a} - ${e.cancion_actual.t}</small>`;
+                    rev.style.display = 'block';
+                    btnR.classList.add('hidden');
+                    btnP.classList.remove('hidden');
+                    if(player) player.stopVideo();
+                }
+            });
 
-        db.ref(`salas/${miSala}/jugadores`).on('value', (snap) => {
-            const data = snap.val(); if(!data) return;
-            const cont = document.getElementById('tablero-jugadores');
-            cont.innerHTML = "";
-            for (let id in data) {
-                const p = data[id];
-                cont.innerHTML += `
-                    <div class="jugador ${id === actualId ? 'turno-activo' : ''}">
-                        <h3 style="margin:0; color:#1DB954;">${p.nombre}</h3>
-                        <div style="font-size:18px; color:gold; margin:5px 0;">🪙 Tokens: ${p.tokens}</div>
-                        <div class="linea">
-                            ${(p.linea || []).sort((a,b)=>a-b).map(año => `<div class="carta">${año}</div>`).join('')}
-                        </div>
-                    </div>`;
-            }
-        });
+            db.ref(`salas/${miSala}/jugadores`).on('value', (snap) => {
+                const data = snap.val(); if(!data) return;
+                const cont = document.getElementById('tablero-jugadores');
+                cont.innerHTML = "";
+                for (let id in data) {
+                    const p = data[id];
+                    cont.innerHTML += `
+                        <div class="jugador ${id === actualId ? 'turno-activo' : ''}">
+                            <h3 style="margin:0; color:#1DB954;">${p.nombre}</h3>
+                            <div style="font-size:20px; color:gold;">🪙 ${p.tokens}</div>
+                            <div style="font-size:14px;">🎴 Cartas: ${(p.linea || []).length}</div>
+                        </div>`;
+                }
+            });
+        }
     </script>
 </body>
 </html>
