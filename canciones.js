@@ -1,12 +1,12 @@
-const listaPrueba = [
-    { titulo: "La Incondicional", artista: "Luis Miguel", year: 1988, youtubeId: "3u8Gf_N9M-Q" },
-    { titulo: "Rayando El Sol", artista: "Maná", year: 1990, youtubeId: "tV_6V7780f0" },
-    { titulo: "Bidi Bidi Bom Bom", artista: "Selena", year: 1994, youtubeId: "R4V3Z29JK_o" },
-    { titulo: "Vuela Vuela", artista: "Magneto", year: 1991, youtubeId: "T7XGz07D8_A" },
-    { titulo: "Ciega, Sordomuda", artista: "Shakira", year: 1998, youtubeId: "mN9XvE7kGls" },
-    { titulo: "Azul", artista: "Cristian Castro", year: 2001, youtubeId: "w_R_H_XN_XU" },
-    { titulo: "Querida", artista: "Juan Gabriel", year: 1984, youtubeId: "o9v_R8mS4I0" },
-    { titulo: "Tú", artista: "Noelia", year: 1999, youtubeId: "L8SST9W39yU" },
-    { titulo: "Provócame", artista: "Chayanne", year: 1992, youtubeId: "LpW6sX9x7O0" },
-    { titulo: "Lamento Boliviano", artista: "Enanitos Verdes", year: 1994, youtubeId: "khbDnLqe_Wk" }
+const nuevasCancionesValidas = [
+    { titulo: "El Triste", artista: "José José", year: 1970, youtubeId: "E20G25SCAEg" },
+    { titulo: "Amor Eterno", artista: "Juan Gabriel", year: 1984, youtubeId: "RgKqxLAhRKE" },
+    { titulo: "Cien Años", artista: "Pedro Infante", year: 1953, youtubeId: "1Y9Sy1e2CFY" },
+    { titulo: "El Rey", artista: "Vicente Fernández", year: 1971, youtubeId: "zhHrefOdlLs" },
+    { titulo: "Tragos Amargos", artista: "Ramón Ayala", year: 1980, youtubeId: "3hpGnaujENM" },
+    { titulo: "La Puerta Negra", artista: "Los Tigres del Norte", year: 1986, youtubeId: "rryDND06LHU" },
+    { titulo: "Como la Flor", artista: "Selena", year: 1992, youtubeId: "FwZTgDjRLM0" },
+    { titulo: "Afuera", artista: "Caifanes", year: 1994, youtubeId: "gBt1jOtKz6Y" },
+    { titulo: "Eres", artista: "Café Tacvba", year: 2003, youtubeId: "98Akpf1ph2o" },
+    { titulo: "La Nave del Olvido", artista: "José José", year: 1970, youtubeId: "BprZX_bGhhg" }
 ];
