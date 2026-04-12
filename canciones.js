@@ -1,4 +1,4 @@
-const nuevasCancionesValidas = [
+const listaPrueba = [
     { titulo: "El Triste", artista: "José José", year: 1970, youtubeId: "E20G25SCAEg" },
     { titulo: "Amor Eterno", artista: "Juan Gabriel", year: 1984, youtubeId: "RgKqxLAhRKE" },
     { titulo: "Cien Años", artista: "Pedro Infante", year: 1953, youtubeId: "1Y9Sy1e2CFY" },
