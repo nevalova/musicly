@@ -24,8 +24,9 @@
         .loader-spin { font-size: 5rem; animation: rotate 2s linear infinite; }
         @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         #revelado-datos { display: none; margin-top: 20px; animation: fadeIn 0.8s ease; }
-        .card-jugador { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; padding: 15px; min-width: 120px; transition: 0.3s; }
+        .card-jugador { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; padding: 15px; min-width: 120px; transition: 0.3s; text-align: center; }
         .card-jugador.activo { border-color: #1DB954; background: rgba(29, 185, 84, 0.1); transform: scale(1.1); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
@@ -56,16 +57,7 @@
     </div>
 
     <script>
-        // 0. VERIFICACIÓN DE CARGA (Para GitHub)
-        window.onload = () => {
-            if (typeof listaPrueba === 'undefined') {
-                console.error("ERROR: No se detecta listaPrueba. Revisa que canciones.js esté en la raíz.");
-                alert("Error crítico: No se encontró la lista de canciones.");
-            } else {
-                console.log("Éxito: " + listaPrueba.length + " canciones cargadas.");
-            }
-        };
-
+        // --- CONFIGURACIÓN FIREBASE ---
         const firebaseConfig = {
             apiKey: "AIzaSyA_WChhOabs671aPhX5uhX3FaLnn_YOc0c",
             authDomain: "party-music-3faae.firebaseapp.com",
@@ -78,6 +70,7 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
+        // --- LÓGICA DE SALA ---
         function genSala(l){ 
             let r='', c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; 
             for(let i=0;i<l;i++) r+=c.charAt(Math.floor(Math.random()*c.length)); 
@@ -86,7 +79,6 @@
         const urlParams = new URLSearchParams(window.location.search);
         const salaID = (urlParams.get('s') || genSala(4)).toUpperCase();
         document.getElementById('display-sala-id').innerText = salaID;
-
         db.ref(`salas/${salaID}`).onDisconnect().remove();
 
         const path = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
@@ -96,8 +88,18 @@
             size: 200, level: 'H'
         });
 
+        // --- CONTROL DE CANCIONES (ANTI-REPETICIÓN) ---
         let player, cancionActualId = "", listaJugadores = [];
-        const frasesCarga = ["Afinando guitarras...", "Buscando éxitos...", "Limpiando discos..."];
+        let cancionesDisponibles = [];
+        const frasesCarga = ["Afinando guitarras...", "Buscando éxitos...", "Limpiando discos...", "Calentando la voz..."];
+
+        function barajar(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
 
         function onYouTubeIframeAPIReady() {
             player = new YT.Player('player', { height: '100%', width: '100%', playerVars: { 'autoplay': 1, 'controls': 0 } });
@@ -105,14 +107,22 @@
 
         function iniciarJuego() {
             if (listaJugadores.length === 0) return alert("Esperando jugadores...");
-            const canciones = listaPrueba; // Referencia directa al archivo externo
             
+            // Si el baúl está vacío, recargamos todas las canciones del archivo js y barajamos
+            if (cancionesDisponibles.length === 0) {
+                console.log("Recargando mazo de canciones...");
+                cancionesDisponibles = barajar([...listaPrueba]); 
+            }
+
             const pantalla = document.getElementById('pantalla-carga');
             document.getElementById('texto-carga').innerText = frasesCarga[Math.floor(Math.random() * frasesCarga.length)];
             pantalla.style.display = 'flex';
 
-            const rC = canciones[Math.floor(Math.random() * canciones.length)];
+            // Sacamos la última canción (esto evita repeticiones en la sesión)
+            const rC = cancionesDisponibles.pop(); 
             const rJ = listaJugadores[Math.floor(Math.random() * listaJugadores.length)];
+
+            console.log("Quedan " + cancionesDisponibles.length + " canciones en el mazo.");
 
             setTimeout(() => {
                 db.ref(`salas/${salaID}/estado_juego`).set({
@@ -128,6 +138,7 @@
 
         function revelar() { db.ref(`salas/${salaID}/estado_juego/revelar`).set(true); }
 
+        // --- ESCUCHA DE FIREBASE ---
         db.ref(`salas/${salaID}/jugadores`).on('value', snap => {
             const container = document.getElementById('contenedor-jugadores');
             const jugadores = snap.val();
@@ -136,7 +147,7 @@
             for (let id in jugadores) {
                 listaJugadores.push({ id, nombre: jugadores[id].nombre });
                 container.innerHTML += `<div class="card-jugador">
-                    <div style="font-size: 1.2rem;">${jugadores[id].linea ? jugadores[id].linea.length : 0} 🎴</div>
+                    <div style="font-size: 1.2rem;">${jugadores[id].linea ? (jugadores[id].linea.length - 1) : 0} 🎴</div>
                     <div style="font-weight:bold;">${jugadores[id].nombre}</div>
                     <div style="color: #1DB954;">${jugadores[id].tokens} 🪙</div>
                 </div>`;

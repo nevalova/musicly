@@ -11,8 +11,6 @@ const listaPrueba = [
     { titulo: "Afuera", artista: "Caifanes", year: 1994, youtubeId: "gBt1jOtKz6Y" },
     { titulo: "Eres", artista: "Café Tacvba", year: 2003, youtubeId: "98Akpf1ph2o" },
     { titulo: "La Nave del Olvido", artista: "José José", year: 1970, youtubeId: "BprZX_bGhhg" },
-
-    // --- 20 Nuevas incorporaciones ---
     { titulo: "Rayando el Sol", artista: "Maná", year: 1990, youtubeId: "tV_6V7780f0" },
     { titulo: "La Incondicional", artista: "Luis Miguel", year: 1988, youtubeId: "3u8Gf_N9M-Q" },
     { titulo: "Persiana Americana", artista: "Soda Stereo", year: 1986, youtubeId: "mO_mZ0m637c" },
