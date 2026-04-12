@@ -32,4 +32,5 @@ const listaPrueba = [
     { titulo: "Sabor a Mí", artista: "Luis Miguel", year: 1997, youtubeId: "aAn8U8iT7eE" },
     { titulo: "Amante Bandido", artista: "Miguel Bosé", year: 1984, youtubeId: "N7xL7e-jM_0" },
     { titulo: "Éxtasis", artista: "Cartel de Santa", year: 2012, youtubeId: "x_vXNfR43-Q" },
-    { titulo: "Rosa Pastel", artista: "Belanova", year: 2005, youtubeId: "H969Vf2
+    { titulo: "Rosa Pastel", artista: "Belanova", year: 2005, youtubeId: "H969Vf2-MHA" }
+];
