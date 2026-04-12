@@ -11,6 +11,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
 
+    <script src="canciones.js"></script>
+
     <style>
         body { margin: 0; background: #000; color: white; font-family: 'Inter', sans-serif; height: 100vh; display: flex; flex-direction: column; align-items: center; overflow: hidden; }
         #yt-player-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; filter: blur(40px) brightness(0.4); transform: scale(1.2); }
@@ -20,7 +22,7 @@
         .admin-panel { margin-top: 20px; background: rgba(0,0,0,0.6); padding: 20px; border-radius: 20px; border: 1px dashed #555; }
         .btn-admin { background: #1DB954; color: white; border: none; padding: 12px 25px; border-radius: 12px; font-weight: bold; cursor: pointer; margin: 5px; font-size: 1rem; }
         
-        /* PANTALLA DE CARGA */
+        /* PANTALLA DE CARGA DIVERTIDA */
         #pantalla-carga { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 1000; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
         .loader-spin { font-size: 5rem; animation: rotate 2s linear infinite; }
         @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
@@ -64,6 +66,7 @@
     </div>
 
     <script>
+        // CONFIGURACIÓN FIREBASE
         const firebaseConfig = {
             apiKey: "AIzaSyA_WChhOabs671aPhX5uhX3FaLnn_YOc0c",
             authDomain: "party-music-3faae.firebaseapp.com",
@@ -87,10 +90,10 @@
         const salaID = (urlParams.get('s') || genSala(4)).toUpperCase();
         document.getElementById('display-sala-id').innerText = salaID;
 
-        // 2. PURGA AL CERRAR
+        // 2. PURGA AL CERRAR (Manejo de sesión IT)
         db.ref(`salas/${salaID}`).onDisconnect().remove();
 
-        // 3. QR CON AUTO-SALA
+        // 3. QR CON AUTO-SALA (Smart Connect)
         const path = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
         new QRious({
             element: document.getElementById('qr-canvas'),
@@ -98,37 +101,51 @@
             size: 200, level: 'H'
         });
 
-        // 4. JUEGO Y YOUTUBE
+        // 4. LÓGICA DE JUEGO DINÁMICA
         let player, cancionActualId = "", listaJugadores = [];
-        const frasesCarga = ["Limpiando la casa...", "Esperando la pizza...", "Afinando guitarras...", "Uniendo a la familia...", "Buscando en el baúl..."];
-        
-        // Pon tus 10 canciones aquí
-        const canciones = [
-            { idYT: "kJQP7kiw5Fk", t: "Despacito", a: "Luis Fonsi", y: 2017 },
-            { idYT: "LHCob76kigA", t: "As It Was", a: "Harry Styles", y: 2022 }
+        const frasesCarga = [
+            "Limpiando la casa...", 
+            "Esperando la pizza...", 
+            "Afinando guitarras...", 
+            "Uniendo a la familia...", 
+            "Buscando los éxitos en el baúl...",
+            "Arreglando los discos rayados...",
+            "Recordando que el que pierde invita las chelas..."
         ];
+        
+        // Jalar la lista de canciones externa (Soporta hasta 300+)
+        const canciones = typeof listaPrueba !== 'undefined' ? listaPrueba : [];
 
         function onYouTubeIframeAPIReady() {
-            player = new YT.Player('player', { height: '100%', width: '100%', playerVars: { 'autoplay': 1, 'controls': 0 } });
+            player = new YT.Player('player', { height: '100%', width: '100%', playerVars: { 'autoplay': 1, 'controls': 0, 'modestbranding': 1 } });
         }
 
         function iniciarJuego() {
             if (listaJugadores.length === 0) return alert("¡Esperando jugadores!");
+            if (canciones.length === 0) return alert("Error: No se cargó la lista de canciones.");
             
             const pantalla = document.getElementById('pantalla-carga');
             document.getElementById('texto-carga').innerText = frasesCarga[Math.floor(Math.random() * frasesCarga.length)];
             pantalla.style.display = 'flex';
 
+            // Selección aleatoria real basada en el largo de tu archivo externo
             const rC = canciones[Math.floor(Math.random() * canciones.length)];
             const rJ = listaJugadores[Math.floor(Math.random() * listaJugadores.length)];
 
+            // Tiempo de "limpieza" para estabilidad de la API de YT
             setTimeout(() => {
                 db.ref(`salas/${salaID}/estado_juego`).set({
                     fase: "JUGANDO",
-                    cancion_actual: rC,
+                    cancion_actual: {
+                        idYT: rC.youtubeId,
+                        t: rC.titulo,
+                        a: rC.artista,
+                        y: rC.year
+                    },
                     turno_de: rJ.id,
                     nombre_turno: rJ.nombre,
-                    revelar: false
+                    revelar: false,
+                    posicion_bloqueada: -1
                 });
                 pantalla.style.display = 'none';
             }, 4000);
@@ -136,7 +153,7 @@
 
         function revelar() { db.ref(`salas/${salaID}/estado_juego/revelar`).set(true); }
 
-        // Sincronización
+        // SINCRONIZACIÓN DE INTERFAZ Y JUGADORES
         db.ref(`salas/${salaID}/jugadores`).on('value', snap => {
             const container = document.getElementById('contenedor-jugadores');
             const jugadores = snap.val();
@@ -148,7 +165,9 @@
                     listaJugadores.push({ id, nombre: jugadores[id].nombre });
                     container.innerHTML += `<div class="card-jugador ${id === tDe ? 'activo' : ''}">
                         <div style="font-size: 1.5rem; font-weight: 900;">${jugadores[id].linea ? jugadores[id].linea.length : 0} 🎴</div>
-                        <div>${jugadores[id].nombre}</div></div>`;
+                        <div>${jugadores[id].nombre}</div>
+                        <div style="color: #1DB954;">${jugadores[id].tokens} 🪙</div>
+                    </div>`;
                 }
             });
         });
@@ -156,7 +175,7 @@
         db.ref(`salas/${salaID}/estado_juego`).on('value', snap => {
             const e = snap.val(); if(!e) return;
             if(e.fase === 'JUGANDO') {
-                document.getElementById('instruccion').innerText = "🎶 TURNO DE: " + e.nombre_turno;
+                document.getElementById('instruccion').innerText = "🎶 TURNO DE: " + e.nombre_turno.toUpperCase();
                 document.getElementById('qr-container').style.display = "none";
                 document.getElementById('revelado-datos').style.display = "none";
                 if(cancionActualId !== e.cancion_actual.idYT) {
