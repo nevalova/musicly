@@ -2,63 +2,90 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Yo me la sé - TV Mode</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yo me la sé - Spotify Edition 🎧</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        body { background: #121212; color: white; font-family: sans-serif; text-align: center; margin: 0; }
+        :root { --spotify-green: #1DB954; --bg-dark: #121212; --card-bg: #1e1e1e; }
         
-        /* Contenedor del Reproductor para que la TV lo acepte */
-        #player-container { 
-            position: fixed; bottom: 10px; right: 10px; 
-            width: 200px; height: 120px; border: 2px solid #333; z-index: 100;
-            background: black;
+        body { 
+            background: var(--bg-dark); color: white; 
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            margin: 0; text-align: center; overflow-x: hidden;
         }
 
-        .header { background: #1DB954; padding: 15px; font-size: 24px; font-weight: bold; }
-        
-        #setup-tv { padding: 50px; }
-        input { padding: 15px; font-size: 20px; width: 300px; border-radius: 10px; border: none; }
-        
+        /* Pantalla de Inicio / Setup */
+        #setup-tv { padding: 100px 20px; }
+        .input-sala { 
+            padding: 20px; font-size: 24px; width: 350px; border-radius: 50px; 
+            border: 2px solid var(--spotify-green); background: #222; color: white; text-align: center;
+        }
+
+        /* Cabecera */
+        .header { background: var(--spotify-green); padding: 20px; font-size: 28px; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+
+        /* Contenedores principales */
         .controles-tv { 
-            margin: 20px; padding: 20px; border: 2px solid #1DB954; 
-            display: inline-block; border-radius: 20px; background: #1e1e1e; min-width: 80%;
+            margin: 30px auto; padding: 30px; border: 2px solid var(--spotify-green); 
+            display: inline-block; border-radius: 30px; background: var(--card-bg); 
+            min-width: 70%; box-shadow: 0 10px 40px rgba(0,0,0,0.8);
         }
 
-        #aviso-turno { font-size: 30px; color: gold; margin-bottom: 10px; }
-        .tablero { display: flex; justify-content: center; gap: 15px; padding: 15px; flex-wrap: wrap; }
-        .jugador { border: 2px solid #333; padding: 15px; border-radius: 15px; min-width: 180px; }
-        .turno-activo { border-color: gold; transform: scale(1.05); }
-
-        button { 
-            padding: 20px 40px; font-size: 22px; cursor: pointer; background: #1DB954; 
-            border: none; color: white; border-radius: 50px; font-weight: bold;
-        }
-        .btn-revelar { background: #f39c12; }
-        .hidden { display: none !important; }
+        #aviso-turno { font-size: 35px; color: #FFD700; margin-bottom: 20px; text-transform: uppercase; font-weight: 800; }
         
-        #revelado-datos { 
-            font-size: 35px; color: gold; background: rgba(0,0,0,0.9); 
-            padding: 20px; border-radius: 20px; border: 3px solid gold;
-            margin: 10px; display: none;
+        .tablero { display: flex; justify-content: center; gap: 20px; padding: 20px; flex-wrap: wrap; }
+
+        /* Estilo de Jugador */
+        .jugador { 
+            border: 3px solid #333; padding: 20px; border-radius: 20px; 
+            background: #252525; min-width: 220px; transition: 0.4s; 
         }
+        .turno-activo { border-color: var(--spotify-green); transform: scale(1.1); box-shadow: 0 0 30px rgba(29, 185, 84, 0.3); }
+
+        /* Botones */
+        button { 
+            padding: 20px 50px; font-size: 24px; cursor: pointer; background: var(--spotify-green); 
+            border: none; color: white; border-radius: 60px; font-weight: bold; transition: 0.3s;
+        }
+        button:hover { transform: scale(1.05); background: #1ed760; }
+        .btn-revelar { background: #f39c12; }
+
+        /* Reproductor Spotify */
+        #player-container { 
+            position: fixed; bottom: 20px; right: 20px; 
+            width: 320px; height: 100px; border-radius: 12px;
+            background: #000; overflow: hidden; z-index: 9999;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+        }
+
+        #revelado-datos { 
+            font-size: 40px; color: #FFD700; background: rgba(0,0,0,0.95); 
+            padding: 30px; border-radius: 25px; border: 4px solid #FFD700;
+            margin: 20px auto; width: 80%; display: none; animation: pop 0.5s ease-out;
+        }
+
+        @keyframes pop { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
     <div id="setup-tv">
-        <h1 style="color: #1DB954;">CONFIGURACIÓN DE SALA</h1>
-        <p>Escribe el nombre de la sala usando el control o un teclado:</p>
-        <input type="text" id="salaInput" placeholder="EJ: FIESTA77">
+        <h1 style="color: var(--spotify-green); font-size: 50px;">🎶 YO ME LA SÉ 🎶</h1>
+        <p style="font-size: 20px; color: #aaa;">Inicia sesión en Spotify en otra pestaña antes de empezar</p>
+        <br>
+        <input type="text" id="salaInput" class="input-sala" placeholder="NOMBRE DE TU SALA">
         <br><br>
         <button onclick="iniciarSala()">CREAR SALA ✅</button>
     </div>
 
     <div id="juego-tv" class="hidden">
         <div class="header" id="display-sala">SALA: --</div>
+        
         <div class="controles-tv">
             <div id="aviso-turno">ESPERANDO JUGADORES...</div>
-            <div style="display: flex; justify-content: center; align-items: center; gap: 30px;">
-                <div id="qrcode" style="background:white; padding:10px; border-radius:10px;"></div>
+            <div style="display: flex; justify-content: center; align-items: center; gap: 50px; flex-wrap: wrap;">
+                <div id="qrcode" style="background:white; padding:15px; border-radius:15px;"></div>
                 <div>
                     <button id="btn-principal" onclick="nuevaRonda()">SIGUIENTE CANCIÓN ➡️</button>
                     <button id="btn-revelar" class="btn-revelar hidden" onclick="revelarAño()">REVELAR AÑO ✨</button>
@@ -66,17 +93,17 @@
             </div>
             <div id="revelado-datos"></div>
         </div>
+
         <div id="tablero-jugadores" class="tablero"></div>
     </div>
 
-    <div id="player-container">
-        <div id="player-visible"></div>
+    <div id="player-container" class="hidden">
+        <div id="spotify-widget"></div>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-database-compat.js"></script>
-    <script src="https://www.youtube.com/iframe_api"></script>
-    <script src="canciones.js?v=1.2"></script>
+    <script src="canciones.js?v=2.0"></script>
 
     <script>
         const firebaseConfig = { 
@@ -93,32 +120,25 @@
 
         let miSala = "";
         let playlist = [];
-        let player, indiceTurno = 0, actualId = "";
+        let actualId = "";
+        let indiceTurno = 0;
 
         function iniciarSala() {
             miSala = document.getElementById('salaInput').value.toUpperCase().trim();
-            if(!miSala) return alert("Escribe un nombre");
-            
+            if(!miSala) return alert("Escribe un nombre de sala");
+
             document.getElementById('setup-tv').classList.add('hidden');
             document.getElementById('juego-tv').classList.remove('hidden');
             document.getElementById('display-sala').innerText = "SALA: " + miSala;
 
-            db.ref(`salas/${miSala}`).remove(); // Limpiar sala vieja
-
+            // QR para los mandos
             new QRCode(document.getElementById("qrcode"), { 
                 text: window.location.href.replace("index.html", "") + "mando.html?sala=" + miSala, 
-                width: 120, height: 120 
+                width: 150, height: 150 
             });
 
             playlist = [...listaCancionesBase];
             escucharCambios();
-        }
-
-        function onYouTubeIframeAPIReady() {
-            player = new YT.Player('player-visible', {
-                height: '120', width: '200', videoId: '',
-                playerVars: { 'autoplay': 1, 'controls': 0, 'origin': window.location.origin }
-            });
         }
 
         function nuevaRonda() {
@@ -126,24 +146,38 @@
             
             db.ref(`salas/${miSala}/jugadores`).once('value', (snap) => {
                 const j = snap.val();
-                if(!j) return alert("¡Necesitas jugadores!");
+                if(!j) return alert("¡No hay jugadores!");
 
                 const ids = Object.keys(j);
                 actualId = ids[indiceTurno];
-                const cancion = playlist.splice(Math.floor(Math.random() * playlist.length), 1)[0]; 
+                const randomIndex = Math.floor(Math.random() * playlist.length);
+                const cancion = playlist.splice(randomIndex, 1)[0]; 
 
-                if(player) player.loadVideoById(cancion.idYT);
+                // REPRODUCIR EN SPOTIFY
+                document.getElementById('player-container').classList.remove('hidden');
+                const widget = document.getElementById('spotify-widget');
+                widget.innerHTML = `
+                    <iframe src="https://open.spotify.com/embed/track/${cancion.idSpoti}?utm_source=generator&autoplay=1" 
+                            width="100%" height="80" 
+                            frameBorder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture">
+                    </iframe>`;
 
                 db.ref(`salas/${miSala}/estado_juego`).set({
-                    fase: "JUGANDO", cancion_actual: cancion, revelar: false,
-                    turno_de: actualId, nombre_turno: j[actualId].nombre, votos: {}
+                    fase: "JUGANDO",
+                    cancion_actual: cancion,
+                    revelar: false,
+                    turno_de: actualId,
+                    nombre_turno: j[actualId].nombre,
+                    votos: {}
                 });
 
                 indiceTurno = (indiceTurno + 1) % ids.length;
             });
         }
 
-        function revelarAño() { db.ref(`salas/${miSala}/estado_juego/revelar`).set(true); }
+        function revelarAño() {
+            db.ref(`salas/${miSala}/estado_juego/revelar`).set(true);
+        }
 
         function escucharCambios() {
             db.ref(`salas/${miSala}/estado_juego`).on('value', (snap) => {
@@ -156,7 +190,7 @@
                     rev.style.display = 'none';
                     btnR.classList.add('hidden');
                     btnP.classList.remove('hidden');
-                    document.getElementById('aviso-turno').innerText = "TURNO DE: " + e.nombre_turno.toUpperCase();
+                    document.getElementById('aviso-turno').innerText = "TURNO DE: " + e.nombre_turno;
                 }
                 
                 if(e.fase === "ESPERA_ROBO") {
@@ -165,11 +199,12 @@
                 }
 
                 if(e.revelar) {
-                    rev.innerHTML = `✨ ${e.cancion_actual.y} ✨<br><small>${e.cancion_actual.a} - ${e.cancion_actual.t}</small>`;
+                    rev.innerHTML = `✨ ${e.cancion_actual.y} ✨<br><small style="font-size:20px">${e.cancion_actual.a} - ${e.cancion_actual.t}</small>`;
                     rev.style.display = 'block';
                     btnR.classList.add('hidden');
                     btnP.classList.remove('hidden');
-                    if(player) player.stopVideo();
+                    document.getElementById('spotify-widget').innerHTML = ""; // Detener música al revelar
+                    document.getElementById('player-container').classList.add('hidden');
                 }
             });
 
@@ -181,9 +216,11 @@
                     const p = data[id];
                     cont.innerHTML += `
                         <div class="jugador ${id === actualId ? 'turno-activo' : ''}">
-                            <h3 style="margin:0; color:#1DB954;">${p.nombre}</h3>
-                            <div style="font-size:20px; color:gold;">🪙 ${p.tokens}</div>
-                            <div style="font-size:14px;">🎴 Cartas: ${(p.linea || []).length}</div>
+                            <h3 style="margin:0; color:var(--spotify-green);">${p.nombre}</h3>
+                            <div style="font-size:24px; color:gold; margin:10px 0;">🪙 ${p.tokens}</div>
+                            <div style="display:flex; flex-wrap:wrap; gap:5px; justify-content:center;">
+                                ${(p.linea || []).sort((a,b)=>a-b).map(a => `<span style="background:white; color:black; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:12px;">${a}</span>`).join('')}
+                            </div>
                         </div>`;
                 }
             });
