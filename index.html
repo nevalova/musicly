@@ -4,162 +4,127 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Yo Me La Sé - TV Mode</title>
-    
     <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-database-compat.js"></script>
     <script src="https://www.youtube.com/iframe_api"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
-
     <script src="canciones.js"></script>
-
     <style>
         body { margin: 0; background: #000; color: white; font-family: 'Inter', sans-serif; height: 100vh; display: flex; flex-direction: column; align-items: center; overflow: hidden; }
         #yt-player-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; filter: blur(40px) brightness(0.4); transform: scale(1.2); }
         .main-container { z-index: 10; width: 90%; max-width: 1000px; text-align: center; margin-top: 20px; }
-        .glass-panel { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 40px; padding: 30px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
-        .sala-tag { background: #1DB954; color: black; font-weight: 900; padding: 5px 20px; border-radius: 50px; display: inline-block; margin-bottom: 10px; font-size: 1.2rem; }
-        .btn-admin { background: #1DB954; color: white; border: none; padding: 12px 25px; border-radius: 12px; font-weight: bold; cursor: pointer; margin: 5px; font-size: 1rem; transition: 0.2s; }
-        .btn-admin:hover { transform: scale(1.05); opacity: 0.9; }
-        #pantalla-carga { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 1000; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
-        .loader-spin { font-size: 5rem; animation: rotate 2s linear infinite; }
-        @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .glass-panel { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 40px; padding: 30px; position: relative; }
+        .sala-tag { background: #1DB954; color: black; font-weight: 900; padding: 5px 20px; border-radius: 50px; display: inline-block; margin-bottom: 10px; }
+        
+        /* CONTENEDOR DE RESPUESTA EN VIVO */
+        #display-chat { font-size: 2.5rem; font-weight: 900; color: #1DB954; text-shadow: 2px 2px 10px rgba(0,0,0,0.8); margin-top: 20px; min-height: 4rem; background: rgba(0,0,0,0.6); border-radius: 20px; padding: 15px; display: none; border-left: 5px solid #1DB954; }
+        
         #revelado-datos { display: none; margin-top: 20px; animation: fadeIn 0.8s ease; }
-        .card-jugador { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; padding: 15px; min-width: 120px; transition: 0.3s; text-align: center; }
-        .card-jugador.activo { border-color: #1DB954; background: rgba(29, 185, 84, 0.2); box-shadow: 0 0 20px rgba(29, 185, 84, 0.4); transform: scale(1.1); }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .card-jugador { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; padding: 10px 20px; min-width: 100px; text-align: center; }
+        .card-jugador.activo { border-color: #1DB954; background: rgba(29, 185, 84, 0.2); box-shadow: 0 0 15px #1DB954; }
     </style>
 </head>
 <body>
-
-    <div id="pantalla-carga">
-        <div class="loader-spin">💿</div>
-        <div id="texto-carga" style="color: #1DB954; font-size: 2rem; font-weight: 900; margin-top: 20px;">Preparando...</div>
-    </div>
-
     <div id="yt-player-container"><div id="player"></div></div>
-
     <div class="main-container">
-        <div class="sala-tag">CÓDIGO DE SALA: <span id="display-sala-id">----</span></div>
+        <div class="sala-tag">SALA: <span id="display-sala-id">----</span></div>
         <div class="glass-panel">
             <h2 id="instruccion">ESCANEEN PARA JUGAR</h2>
             <div id="qr-container"><canvas id="qr-canvas"></canvas></div>
+            
+            <div id="display-chat">...</div>
+
             <div id="revelado-datos">
                 <h1 id="display-year" style="font-size: 6rem; margin: 0; color: #FFD700;">----</h1>
                 <h2 id="display-song" style="font-size: 2.5rem; margin: 5px 0;">Título</h2>
-                <h3 id="display-artist" style="opacity: 0.8; font-weight: 400;">Artista</h3>
+                <h3 id="display-artist" style="opacity: 0.8;">Artista</h3>
             </div>
             <div style="margin-top:20px;">
-                <button class="btn-admin" onclick="iniciarJuego()">🚀 SIGUIENTE RONDA</button>
-                <button class="btn-admin" style="background:#2196F3;" onclick="revelar()">👁️ REVELAR</button>
+                <button style="background:#1DB954; color:white; border:none; padding:12px 25px; border-radius:12px; font-weight:bold; cursor:pointer;" onclick="iniciarJuego()">🚀 SIGUIENTE RONDA</button>
+                <button style="background:#2196F3; color:white; border:none; padding:12px 25px; border-radius:12px; font-weight:bold; cursor:pointer;" onclick="revelar()">👁️ REVELAR</button>
             </div>
         </div>
         <div id="contenedor-jugadores" style="display:flex; justify-content:center; gap:15px; flex-wrap:wrap; margin-top:30px;"></div>
     </div>
 
     <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyA_WChhOabs671aPhX5uhX3FaLnn_YOc0c",
-            authDomain: "party-music-3faae.firebaseapp.com",
-            databaseURL: "https://party-music-3faae-default-rtdb.firebaseio.com",
-            projectId: "party-music-3faae",
-            storageBucket: "party-music-3faae.firebasestorage.app",
-            messagingSenderId: "877613370267",
-            appId: "1:877613370267:web:f096e520df8a350ba86f3e"
-        };
+        const firebaseConfig = { apiKey: "AIzaSyA_WChhOabs671aPhX5uhX3FaLnn_YOc0c", databaseURL: "https://party-music-3faae-default-rtdb.firebaseio.com", projectId: "party-music-3faae" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        function genSala(l){ 
-            let r='', c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; 
-            for(let i=0;i<l;i++) r+=c.charAt(Math.floor(Math.random()*c.length)); 
-            return r; 
-        }
         const urlParams = new URLSearchParams(window.location.search);
-        const salaID = (urlParams.get('s') || genSala(4)).toUpperCase();
+        const salaID = (urlParams.get('s') || "GAME").toUpperCase();
         document.getElementById('display-sala-id').innerText = salaID;
-        db.ref(`salas/${salaID}`).onDisconnect().remove();
 
-        const path = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
-        new QRious({
-            element: document.getElementById('qr-canvas'),
-            value: window.location.origin + path + "mando.html?sala=" + salaID,
-            size: 200, level: 'H'
-        });
+        new QRious({ element: document.getElementById('qr-canvas'), value: window.location.origin + window.location.pathname.replace("index.html", "") + "mando.html?sala=" + salaID, size: 200 });
 
         let player, cancionActualId = "", listaJugadores = [], indexTurno = 0;
         let cancionesDisponibles = [];
-        const frasesCarga = ["Afinando guitarras...", "Buscando éxitos...", "Limpiando discos...", "Calentando la voz..."];
 
         function onYouTubeIframeAPIReady() {
-            player = new YT.Player('player', { 
-                height: '100%', 
-                width: '100%', 
-                playerVars: { 'autoplay': 1, 'controls': 0, 'rel': 0, 'disablekb': 1 },
-                events: {
-                    'onReady': (event) => { event.target.setPlaybackQuality('small'); },
-                    'onStateChange': (event) => { if(event.data === YT.PlayerState.PLAYING) event.target.setPlaybackQuality('small'); }
-                }
+            player = new YT.Player('player', { height: '100%', width: '100%', playerVars: { 'autoplay': 1, 'controls': 0, 'mute': 0 },
+                events: { 'onReady': (e) => e.target.setPlaybackQuality('small') }
             });
         }
 
         function iniciarJuego() {
-            if (listaJugadores.length === 0) return alert("Esperando jugadores...");
+            if (listaJugadores.length === 0) return alert("Sin jugadores");
             if (cancionesDisponibles.length === 0) cancionesDisponibles = [...listaPrueba].sort(() => Math.random() - 0.5);
-
-            const pantalla = document.getElementById('pantalla-carga');
-            document.getElementById('texto-carga').innerText = frasesCarga[Math.floor(Math.random() * frasesCarga.length)];
-            pantalla.style.display = 'flex';
-
             const rC = cancionesDisponibles.pop(); 
             const rJ = listaJugadores[indexTurno];
             indexTurno = (indexTurno + 1) % listaJugadores.length;
 
-            setTimeout(() => {
-                db.ref(`salas/${salaID}/estado_juego`).set({
-                    fase: "JUGANDO",
-                    cancion_actual: { idYT: rC.youtubeId, t: rC.titulo, a: rC.artista, y: rC.year },
-                    turno_de: rJ.id,
-                    nombre_turno: rJ.nombre,
-                    revelar: false,
-                    bloqueado: false
-                });
-                pantalla.style.display = 'none';
-            }, 3000);
+            db.ref(`salas/${salaID}/estado_juego`).set({
+                fase: "JUGANDO",
+                cancion_actual: { idYT: rC.youtubeId, t: rC.titulo, a: rC.artista, y: rC.year },
+                turno_de: rJ.id,
+                nombre_turno: rJ.nombre,
+                chat: "", // Limpiamos el chat para la nueva ronda
+                revelar: false
+            });
         }
 
         function revelar() { db.ref(`salas/${salaID}/estado_juego/revelar`).set(true); }
 
         db.ref(`salas/${salaID}/jugadores`).on('value', snap => {
             const container = document.getElementById('contenedor-jugadores');
-            const jugadores = snap.val();
-            if(!jugadores) return;
+            const jugadores = snap.val(); if(!jugadores) return;
             listaJugadores = Object.keys(jugadores).map(id => ({ id, ...jugadores[id] }));
-
+            
             db.ref(`salas/${salaID}/estado_juego/turno_de`).once('value', tSnap => {
                 const actualID = tSnap.val();
                 container.innerHTML = listaJugadores.map(j => `
                     <div class="card-jugador ${j.id === actualID ? 'activo' : ''}">
-                        <div style="font-size: 1.2rem;">${j.linea ? (j.linea.length - 1) : 0} 🎴</div>
-                        <div style="font-weight:bold;">${j.nombre}</div>
-                        <div style="color: #1DB954;">${j.tokens} 🪙</div>
+                        <div>${j.nombre}</div>
                     </div>`).join('');
             });
         });
 
         db.ref(`salas/${salaID}/estado_juego`).on('value', snap => {
             const e = snap.val(); if(!e) return;
+            const chatDiv = document.getElementById('display-chat');
+            
             if(e.fase === 'JUGANDO') {
                 document.getElementById('instruccion').innerText = "🎶 TURNO DE: " + e.nombre_turno;
                 document.getElementById('qr-container').style.display = "none";
                 document.getElementById('revelado-datos').style.display = "none";
+                
+                chatDiv.style.display = "block";
+                chatDiv.innerText = e.chat || "Esperando respuesta...";
+                
                 if(cancionActualId !== e.cancion_actual.idYT) {
                     cancionActualId = e.cancion_actual.idYT;
-                    if(player && player.loadVideoById) player.loadVideoById({ videoId: cancionActualId, suggestedQuality: 'small' });
+                    if(player && player.loadVideoById) {
+                        player.loadVideoById({ videoId: cancionActualId, suggestedQuality: 'small' });
+                        player.playVideo();
+                    }
                 }
             }
             if(e.revelar) {
                 document.getElementById('revelado-datos').style.display = "block";
+                chatDiv.style.display = "none";
                 document.getElementById('display-year').innerText = e.cancion_actual.y;
                 document.getElementById('display-song').innerText = e.cancion_actual.t;
                 document.getElementById('display-artist').innerText = e.cancion_actual.a;
