@@ -1,98 +1,111 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mando - Yo me la sé</title>
-    <style>
-        body { background:#121212; color:white; font-family:sans-serif; text-align:center; padding:15px; margin:0; }
-        .card { background:#1e1e1e; padding:15px; border-radius:15px; margin-bottom:10px; border:1px solid #333; }
-        input { padding:12px; width:80%; border-radius:8px; margin-bottom:10px; text-align:center; background:#000; color:white; border:1px solid #1DB954; font-size:18px; }
-        button { padding:15px; border-radius:50px; border:none; font-weight:bold; width:100%; margin:5px 0; cursor:pointer; }
-        .btn-green { background:#1DB954; color:white; }
-        .btn-blue { background:#2196F3; border:2px solid gold; color:white; }
-        .hidden { display:none !important; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mando - Yo me la sé</title>
+<style>
+/* Tu estética original intacta */
+body { background:#121212; color:white; font-family:'Segoe UI', sans-serif; text-align:center; padding:10px; margin:0; }
+.card { background:#1e1e1e; padding:15px; border-radius:15px; margin-bottom:10px; border:1px solid #333; }
+input { padding:12px; width:85%; border-radius:8px; margin-bottom:10px; text-align:center; background:#000; color:white; border:1px solid #1DB954; }
+button { padding:15px; border-radius:50px; border:none; font-weight:bold; width:100%; margin:5px 0; cursor:pointer; }
+.btn-green { background:#1DB954; color:white; }
+.btn-red { background:#f44336; color:white; }
+.btn-blue { background:#2196F3; border:2px solid gold; color:white; }
+.hidden { display:none !important; }
+</style>
 </head>
 <body>
 
 <div id="setup" class="card">
-    <h2>UNIRSE A SALA</h2>
-    <input id="salaI" placeholder="CÓDIGO">
-    <input id="nombreI" placeholder="TU NOMBRE">
-    <button class="btn-green" onclick="unirme()">ENTRAR</button>
+<h2>UNIRSE A SALA</h2>
+<input id="salaI" placeholder="CÓDIGO">
+<input id="nombreI" placeholder="NOMBRE">
+<button class="btn-green" onclick="unirme()">ENTRAR</button>
 </div>
 
 <div id="juego" class="hidden">
-    <div class="card">🪙 TOKENS: <span id="tokensV">--</span> | 🎴 CARTAS: <span id="cartasV">--</span></div>
-    
-    <button id="btn-sp" class="btn-green" onclick="abrirSp()">▶️ ESCUCHAR EN MI MÓVIL</button>
+<div class="card">🪙 <span id="tokensV">--</span> | 🎴 <span id="cartasV">--</span></div>
 
-    <div class="card">
-        <p>¿AÑO DE LA CANCIÓN?</p>
-        <input type="number" id="inputAnio" placeholder="Ej: 1998">
-    </div>
+<button id="btn-spotify" class="btn-green hidden" onclick="abrirCancion()">▶️ ESCUCHAR EN SPOTIFY</button>
+<button id="btn-hitster" class="btn-blue hidden" onclick="comprarCarta()">¡YO ME LA SÉ! ⚡</button>
 
-    <button class="btn-blue" onclick="comprar()">¡REVELAR! (COSTO 🪙2)</button>
-    <p id="status-msg" style="color:#888;">Conectado</p>
+<div class="card"><div id="status-msg">Conectando...</div></div>
+
+<div id="zona-posicion" class="card hidden"></div>
+<div id="zona-robo" class="hidden card"><button class="btn-red" onclick="intentarRobar()">ROBAR 🎯</button></div>
+<div id="zona-voto" class="hidden card">
+    <button class="btn-green" onclick="votar(true)">SÍ 👍</button>
+    <button class="btn-red" onclick="votar(false)">NO 👎</button>
+</div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-database-compat.js"></script>
 
 <script>
-const firebaseConfig = { apiKey: "TU_API_KEY", databaseURL: "https://party-music-default-rtdb.firebaseio.com", projectId: "party-music" };
+const firebaseConfig = { apiKey: "AIzaSyA...", authDomain: "party-music.firebaseapp.com", databaseURL: "https://party-music-default-rtdb.firebaseio.com", projectId: "party-music" };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-let miId, salaA, misT = 0, trackId = "";
+let miId, salaA, trackActual = null;
+let misT = 0, miL = [2000];
 
-window.onload = () => {
-    const params = new URLSearchParams(window.location.search);
-    if(params.get('sala')) document.getElementById('salaI').value = params.get('sala');
-};
+function abrirCancion(){ if(trackActual) window.location.href = "spotify:track:" + trackActual; }
 
 function unirme(){
     salaA = document.getElementById('salaI').value.toUpperCase().trim();
     const nombre = document.getElementById('nombreI').value.trim();
-    if(!salaA || !nombre) return alert("Faltan datos");
-
+    if(!salaA || !nombre){ alert("Completa los datos"); return; }
     miId = "p_" + Date.now();
-    const ref = db.ref(`salas/${salaA}/jugadores/${miId}`);
-    ref.set({ nombre, tokens: 2, linea: [2000] });
-    ref.onDisconnect().remove();
-
+    db.ref(`salas/${salaA}/jugadores/${miId}`).set({ nombre, tokens: 3, linea: [2000] });
     document.getElementById('setup').classList.add('hidden');
     document.getElementById('juego').classList.remove('hidden');
+    escuchar();
+}
 
-    db.ref(`salas/${salaA}/estado_juego`).on('value', snap => {
+function escuchar(){
+    db.ref(`salas/${salaA}/estado_juego`).on('value', snap=>{
         const e = snap.val();
         if(!e) return;
-        trackId = e.cancion_actual ? e.cancion_actual.spotifyId : "";
-        if(e.revelar) {
-            document.getElementById('btn-sp').classList.add('hidden');
-            document.getElementById('inputAnio').value = "";
-        } else {
-            document.getElementById('btn-sp').classList.remove('hidden');
+        if(e.cancion_actual && e.cancion_actual.spotifyId){
+            trackActual = e.cancion_actual.spotifyId;
+            document.getElementById('btn-spotify').classList.remove('hidden');
+            document.getElementById('btn-hitster').classList.remove('hidden');
         }
+        if(e.revelar){
+            document.getElementById('btn-spotify').classList.add('hidden');
+            document.getElementById('btn-hitster').classList.add('hidden');
+        }
+        document.getElementById('status-msg').innerText = e.fase || "Esperando...";
     });
 
-    db.ref(`salas/${salaA}/jugadores/${miId}`).on('value', s => {
-        if(s.val()){
-            misT = s.val().tokens;
+    db.ref(`salas/${salaA}/jugadores/${miId}`).on('value', s=>{
+        const data = s.val();
+        if(data){
+            misT = data.tokens || 0;
+            miL = data.linea || [2000];
             document.getElementById('tokensV').innerText = misT;
-            document.getElementById('cartasV').innerText = (s.val().linea || []).length - 1;
+            document.getElementById('cartasV').innerText = miL.length - 1;
         }
     });
 }
 
-function abrirSp() { if(trackId) window.location.href = "spotify:track:" + trackId; }
-
-function comprar(){
-    if(!document.getElementById('inputAnio').value) return alert("Escribe el año primero");
-    if(misT < 2) return alert("No tienes tokens");
-    db.ref(`salas/${salaA}/jugadores/${miId}/tokens`).transaction(t => (t || 0) - 2);
+function comprarCarta(){
+    if(misT < 3) return alert("No tienes tokens");
+    db.ref(`salas/${salaA}/jugadores/${miId}/tokens`).transaction(t => (t || 0) - 3);
     db.ref(`salas/${salaA}/estado_juego/revelar`).set(true);
+}
+
+function intentarRobar(){
+    if(misT < 1) return alert("No tienes tokens");
+    db.ref(`salas/${salaA}/jugadores/${miId}/tokens`).transaction(t => (t || 0) - 1);
+}
+
+function votar(v){
+    db.ref(`salas/${salaA}/estado_juego/votos/${miId}`).set(v);
+    document.getElementById('status-msg').innerText = "Voto enviado 👍";
 }
 </script>
 </body>

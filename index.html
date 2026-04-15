@@ -1,42 +1,39 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>TV - Yo me la sé</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body { background:#000; color:white; font-family:sans-serif; text-align:center; padding:20px; margin:0; overflow:hidden; }
-        #spotify-bg-container { position:fixed; top:0; left:0; width:100%; height:100%; z-index:-1; filter:blur(40px) brightness(0.5); transform:scale(1.3); }
-        .card { background:rgba(17,17,17,0.85); padding:20px; border-radius:20px; margin:10px auto; max-width:500px; border:1px solid #333; backdrop-filter: blur(10px); }
-        button { padding:15px; margin:10px; width:90%; border:none; border-radius:10px; font-size:16px; font-weight:bold; cursor:pointer; }
-        .btn { background:#1DB954; color:white; }
-        .player-tag { background:#333; padding:5px 10px; border-radius:10px; margin:5px; display:inline-block; font-size:14px; }
-        #detalles-revelados { margin-top: 15px; min-height: 100px; }
-    </style>
+<meta charset="UTF-8">
+<title>TV - Yo me la sé</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+/* Tu estética original */
+body { background:#000; color:white; font-family:sans-serif; text-align:center; padding:20px; margin:0; overflow:hidden; }
+#bg-spotify { position:fixed; top:0; left:0; width:100%; height:100%; z-index:-1; filter:blur(40px) brightness(0.5); transform:scale(1.2); }
+.card { background:rgba(17,17,17,0.9); padding:20px; border-radius:20px; margin:10px auto; max-width:500px; border:1px solid #333; position:relative; z-index:1; }
+button { padding:15px; margin:10px; width:90%; border:none; border-radius:10px; font-size:16px; cursor:pointer; }
+.btn { background:#1DB954; color:white; }
+</style>
 </head>
 <body>
 
-<div id="spotify-bg-container"><div id="embed-spotify-bg"></div></div>
+<div id="bg-spotify"></div>
 
 <h1>🎧 YO ME LA SÉ - TV</h1>
 
-<div class="card" id="contenedor-qr">
-    <h2>Sala: <span id="salaCodigo">----</span></h2>
-    <canvas id="qr"></canvas>
-    <p>Código: <strong id="codigoGrande" style="color:#1DB954; font-size:24px;"></strong></p>
-    <p style="color: gold;">🏆 GANA EL PRIMERO CON 5 CANCIONES</p>
-</div>
-
-<div id="lista-jugadores" style="margin-bottom:20px;"></div>
-
 <div class="card">
-    <button class="btn" onclick="iniciarJuego()">INICIAR PARTIDA</button>
-    <button class="btn" onclick="siguienteCancion()">SIGUIENTE CANCIÓN</button>
+<h2>Sala: <span id="salaCodigo">----</span></h2>
+<canvas id="qr"></canvas>
+<p>Escanea para unirte</p>
+<p>Código: <strong id="codigoGrande"></strong></p>
 </div>
 
 <div class="card">
-    <h2 id="info">Esperando jugadores...</h2>
-    <div id="detalles-revelados"></div>
+<button class="btn" onclick="iniciarJuego()">INICIAR</button>
+<button class="btn" onclick="siguienteCancion()">SIGUIENTE CANCIÓN</button>
+<button class="btn" onclick="revelar()">REVELAR</button>
+</div>
+
+<div class="card">
+<h2 id="info">Esperando jugadores...</h2>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
@@ -45,75 +42,55 @@
 <script src="canciones.js"></script>
 
 <script>
-const firebaseConfig = {
-    apiKey: "TU_API_KEY", // Reemplaza con tu API Key real
-    databaseURL: "https://party-music-default-rtdb.firebaseio.com",
-    projectId: "party-music"
-};
+const firebaseConfig = { apiKey: "AIzaSyA...", authDomain: "party-music.firebaseapp.com", databaseURL: "https://party-music-default-rtdb.firebaseio.com", projectId: "party-music" };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-let sala = Math.random().toString(36).substring(2,6).toUpperCase();
-let indice = 0;
-const VICTORIA = 5;
-
+let sala = generarSala();
 document.getElementById("salaCodigo").innerText = sala;
 document.getElementById("codigoGrande").innerText = sala;
 
 const base = window.location.origin + window.location.pathname.replace("index.html", "");
-QRCode.toCanvas(document.getElementById('qr'), base + "mando.html?sala=" + sala);
+const url = base + "mando.html?sala=" + sala;
 
-// Escuchar mandos y victoria
-db.ref(`salas/${sala}/jugadores`).on('value', snap => {
-    const p = snap.val();
-    const div = document.getElementById('lista-jugadores');
-    div.innerHTML = "";
-    if(p) Object.values(p).forEach(j => {
-        const n = (j.linea || []).length - 1;
-        div.innerHTML += `<span class="player-tag">👤 ${j.nombre} | 🪙 ${j.tokens} | 🎴 ${n}/${VICTORIA}</span>`;
-        if(n >= VICTORIA) document.getElementById("info").innerText = "🏆 ¡GANÓ " + j.nombre + "!";
-    });
-});
+QRCode.toCanvas(document.getElementById('qr'), url, err=>{ if(err) console.error(err); });
 
-// Escuchar si alguien pulsa "Revelar" desde el mando
-db.ref(`salas/${sala}/estado_juego/revelar`).on('value', snap => {
-    if(snap.val() === true) revelarPantalla();
-});
+let indice = 0;
 
-function iniciarJuego(){
-    indice = 0;
-    db.ref(`salas/${sala}/jugadores`).once('value', s => {
-        const js = s.val();
-        if(js) Object.keys(js).forEach(id => db.ref(`salas/${sala}/jugadores/${id}`).update({tokens: 2, linea: [2000]}));
-    });
-    siguienteCancion();
-}
+function generarSala(){ return Math.random().toString(36).substring(2,6).toUpperCase(); }
+
+function iniciarJuego(){ indice = 0; siguienteCancion(); }
 
 function siguienteCancion(){
-    if(!CANCIONES || CANCIONES.length === 0) return;
-    if(indice >= 20) indice = 0;
+    if(!CANCIONES || CANCIONES.length === 0){ alert("No hay canciones"); return; }
+    if(indice >= CANCIONES.length){ indice = 0; }
     const c = CANCIONES[indice];
 
     db.ref(`salas/${sala}/estado_juego`).set({
-        cancion_actual: { spotifyId: c.spotifyId, t: c.titulo, a: c.artista, y: c.year },
+        fase: "JUGANDO",
+        cancion_actual: { spotifyId: c.spotifyId, y: c.year, t: c.titulo, a: c.artista },
         revelar: false
     });
 
-    document.getElementById('embed-spotify-bg').innerHTML = `<iframe src="https://open.spotify.com/embed/track/${c.spotifyId}?utm_source=generator&autoplay=1" width="100%" height="380" frameBorder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>`;
-    
+    // Carga el audio en la TV
+    document.getElementById("bg-spotify").innerHTML = `<iframe src="https://open.spotify.com/embed/track/${c.spotifyId}?utm_source=generator&autoplay=1" width="100%" height="100%" frameBorder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>`;
     document.getElementById("info").innerText = "🎵 Escuchando...";
-    document.getElementById("detalles-revelados").innerHTML = "";
-    document.getElementById("contenedor-qr").style.opacity = "0.2";
     indice++;
 }
 
-function revelarPantalla(){
+function revelar(){
+    db.ref(`salas/${sala}/estado_juego/revelar`).set(true);
     const c = CANCIONES[indice - 1];
-    if(!c) return;
-    document.getElementById("info").innerText = "¡RESPUESTA REVELADA!";
-    document.getElementById("detalles-revelados").innerHTML = `<h2 style="color:#1DB954; margin:0;">${c.titulo}</h2><p style="margin:5px;">${c.artista}</p><h1 style="border:2px solid gold; display:inline-block; padding:5px 20px;">${c.year}</h1>`;
-    document.getElementById("contenedor-qr").style.opacity = "1";
+    document.getElementById("info").innerText = `${c.titulo} - ${c.artista} (${c.year})`;
 }
+
+// Escuchar si el mando pide revelar
+db.ref(`salas/${sala}/estado_juego/revelar`).on('value', snap => {
+    if(snap.val() === true) {
+        const c = CANCIONES[indice - 1];
+        document.getElementById("info").innerText = `${c.titulo} - ${c.artista} (${c.year})`;
+    }
+});
 </script>
 </body>
 </html>
