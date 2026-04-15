@@ -1,127 +1,99 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mando - Yo me la sé</title>
-
-<style>
-body { background:#121212; color:white; font-family:'Segoe UI', sans-serif; text-align:center; padding:10px; margin:0; }
-.card { background:#1e1e1e; padding:15px; border-radius:15px; margin-bottom:10px; border:1px solid #333; }
-input { padding:12px; width:85%; border-radius:8px; margin-bottom:10px; text-align:center; background:#000; color:white; border:1px solid #1DB954; }
-button { padding:15px; border-radius:50px; border:none; font-weight:bold; width:100%; margin:5px 0; cursor:pointer; }
-.btn-green { background:#1DB954; color:white; }
-.btn-blue { background:#2196F3; border:2px solid gold; color:white; }
-.hidden { display:none !important; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mando - Yo me la sé</title>
+    <style>
+        body { background:#121212; color:white; font-family:sans-serif; text-align:center; padding:15px; margin:0; }
+        .card { background:#1e1e1e; padding:15px; border-radius:15px; margin-bottom:10px; border:1px solid #333; }
+        input { padding:12px; width:80%; border-radius:8px; margin-bottom:10px; text-align:center; background:#000; color:white; border:1px solid #1DB954; font-size:18px; }
+        button { padding:15px; border-radius:50px; border:none; font-weight:bold; width:100%; margin:5px 0; cursor:pointer; }
+        .btn-green { background:#1DB954; color:white; }
+        .btn-blue { background:#2196F3; border:2px solid gold; color:white; }
+        .hidden { display:none !important; }
+    </style>
 </head>
-
 <body>
 
 <div id="setup" class="card">
-<h2>UNIRSE A SALA</h2>
-<input id="salaI" placeholder="CÓDIGO DE SALA">
-<input id="nombreI" placeholder="TU NOMBRE">
-<button class="btn-green" onclick="unirme()">ENTRAR AL JUEGO</button>
+    <h2>UNIRSE A SALA</h2>
+    <input id="salaI" placeholder="CÓDIGO">
+    <input id="nombreI" placeholder="TU NOMBRE">
+    <button class="btn-green" onclick="unirme()">ENTRAR</button>
 </div>
 
 <div id="juego" class="hidden">
-    <div class="card">
-        🪙 TOKENS: <span id="tokensV">--</span> | 🎴 CARTAS: <span id="cartasV">--</span>
-    </div>
-
-    <button id="btn-hitster" class="btn-blue" onclick="comprarCarta()">¡YO ME LA SÉ! (COSTO 🪙2)</button>
+    <div class="card">🪙 TOKENS: <span id="tokensV">--</span> | 🎴 CARTAS: <span id="cartasV">--</span></div>
+    
+    <button id="btn-sp" class="btn-green" onclick="abrirSp()">▶️ ESCUCHAR EN MI MÓVIL</button>
 
     <div class="card">
-        <div id="status-msg">Conectado a la TV</div>
+        <p>¿AÑO DE LA CANCIÓN?</p>
+        <input type="number" id="inputAnio" placeholder="Ej: 1998">
     </div>
+
+    <button class="btn-blue" onclick="comprar()">¡REVELAR! (COSTO 🪙2)</button>
+    <p id="status-msg" style="color:#888;">Conectado</p>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-database-compat.js"></script>
 
 <script>
-// [BLOQUE: CONFIGURACIÓN]
-const firebaseConfig = {
-    apiKey: "AIzaSyA...", // Usa tu API Key real
-    authDomain: "party-music.firebaseapp.com",
-    databaseURL: "https://party-music-default-rtdb.firebaseio.com",
-    projectId: "party-music"
-};
-
+const firebaseConfig = { apiKey: "TU_API_KEY", databaseURL: "https://party-music-default-rtdb.firebaseio.com", projectId: "party-music" };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-let miId, salaA, misT = 0;
+let miId, salaA, misT = 0, trackId = "";
 
-// [BLOQUE: AUTO-RELLENO DE SALA]
 window.onload = () => {
     const params = new URLSearchParams(window.location.search);
     if(params.get('sala')) document.getElementById('salaI').value = params.get('sala');
 };
 
-// [BLOQUE: ENTRADA A SALA]
 function unirme(){
     salaA = document.getElementById('salaI').value.toUpperCase().trim();
     const nombre = document.getElementById('nombreI').value.trim();
-
-    if(!salaA || !nombre) return alert("Faltan datos para entrar");
+    if(!salaA || !nombre) return alert("Faltan datos");
 
     miId = "p_" + Date.now();
-    const refJugador = db.ref(`salas/${salaA}/jugadores/${miId}`);
-
-    // Configuración inicial pedida: 2 tokens y línea base
-    refJugador.set({
-        nombre: nombre,
-        tokens: 2,
-        linea: [2000]
-    });
-
-    // Limpieza automática al desconectar
-    refJugador.onDisconnect().remove();
+    const ref = db.ref(`salas/${salaA}/jugadores/${miId}`);
+    ref.set({ nombre, tokens: 2, linea: [2000] });
+    ref.onDisconnect().remove();
 
     document.getElementById('setup').classList.add('hidden');
     document.getElementById('juego').classList.remove('hidden');
 
-    escucharCambios();
-}
-
-// [BLOQUE: SINCRONIZACIÓN]
-function escucharCambios(){
-    // Escuchar estado global de la TV
     db.ref(`salas/${salaA}/estado_juego`).on('value', snap => {
         const e = snap.val();
         if(!e) return;
-        document.getElementById('status-msg').innerText = e.revelar ? "Revelado en TV" : "Escuchando...";
+        trackId = e.cancion_actual ? e.cancion_actual.spotifyId : "";
+        if(e.revelar) {
+            document.getElementById('btn-sp').classList.add('hidden');
+            document.getElementById('inputAnio').value = "";
+        } else {
+            document.getElementById('btn-sp').classList.remove('hidden');
+        }
     });
 
-    // Escuchar datos propios (Tokens y Cartas)
     db.ref(`salas/${salaA}/jugadores/${miId}`).on('value', s => {
-        const d = s.val();
-        if(d){
-            misT = d.tokens || 0;
+        if(s.val()){
+            misT = s.val().tokens;
             document.getElementById('tokensV').innerText = misT;
-            // Calculamos cartas restando el "2000" inicial
-            document.getElementById('cartasV').innerText = (d.linea || []).length - 1;
+            document.getElementById('cartasV').innerText = (s.val().linea || []).length - 1;
         }
     });
 }
 
-// [BLOQUE: ACCIÓN DE JUEGO]
-function comprarCarta(){
-    if(misT < 2) return alert("Necesitas 2 tokens para revelar");
+function abrirSp() { if(trackId) window.location.href = "spotify:track:" + trackId; }
 
-    // 1. Restamos los tokens al jugador
+function comprar(){
+    if(!document.getElementById('inputAnio').value) return alert("Escribe el año primero");
+    if(misT < 2) return alert("No tienes tokens");
     db.ref(`salas/${salaA}/jugadores/${miId}/tokens`).transaction(t => (t || 0) - 2);
-
-    // 2. Mandamos la señal de revelar a la TV
-    // Usamos .set(true) para que el listener de la TV lo detecte
     db.ref(`salas/${salaA}/estado_juego/revelar`).set(true);
-    
-    // 3. (Opcional) Avisamos al mando que la orden se envió
-    document.getElementById('status-msg').innerText = "¡Revelando en la TV! 🎯";
 }
 </script>
-
 </body>
 </html>
