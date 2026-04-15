@@ -1,113 +1,262 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mando - Yo me la sé</title>
-<style>
-body { background:#121212; color:white; font-family:'Segoe UI', sans-serif; text-align:center; padding:10px; margin:0; }
-.card { background:#1e1e1e; padding:15px; border-radius:15px; margin-bottom:10px; border:1px solid #333; }
-input { padding:12px; width:85%; border-radius:8px; margin-bottom:10px; text-align:center; background:#000; color:white; border:1px solid #1DB954; }
-button { padding:15px; border-radius:50px; border:none; font-weight:bold; width:100%; margin:5px 0; cursor:pointer; }
-.btn-green { background:#1DB954; color:white; }
-.btn-red { background:#f44336; color:white; }
-.btn-blue { background:#2196F3; border:2px solid gold; color:white; }
-.hidden { display:none !important; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mando - Yo me la sé</title>
+    <style>
+        /* TU ESTÉTICA ORIGINAL INTACTA */
+        body { background: #121212; color: white; font-family: 'Segoe UI', sans-serif; text-align: center; padding: 10px; margin: 0; }
+        .card { background: #1e1e1e; padding: 15px; border-radius: 15px; margin-bottom: 10px; border: 1px solid #333; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        input { padding: 12px; width: 85%; border-radius: 8px; margin-bottom: 10px; text-align: center; font-size: 16px; background: #000; color: white; border: 1px solid #1DB954; }
+        button { padding: 15px; border-radius: 50px; border: none; font-weight: bold; width: 100%; font-size: 14px; text-transform: uppercase; margin: 5px 0; cursor: pointer; transition: 0.2s; }
+        .btn-green { background: #1DB954; color: white; }
+        .btn-red { background: #f44336; color: white; }
+        .btn-blue { background: #2196F3; color: white; border: 2px solid gold; box-shadow: 0 0 10px gold; }
+        .btn-grey { background: #444; color: white; }
+        .bloqueado { background: #b71c1c !important; opacity: 0.5; cursor: not-allowed; }
+        .hidden { display: none !important; }
+        #player-local { position: absolute; top: -9999px; }
+        .checkbox-container { font-size: 14px; color: #1DB954; font-weight: bold; cursor: pointer; }
+        .checkbox-container input { width: auto; margin-right: 10px; }
+    </style>
 </head>
 <body>
 
-<div id="setup" class="card">
-<h2>UNIRSE A SALA</h2>
-<input id="salaI" placeholder="CÓDIGO DE SALA">
-<input id="nombreI" placeholder="TU NOMBRE">
-<button class="btn-green" onclick="unirme()">ENTRAR AL JUEGO</button>
-</div>
+    <div id="player-local"></div>
 
-<div id="juego" class="hidden">
-    <div class="card">🪙 <span id="tokensV">--</span> | 🎴 <span id="cartasV">--</span></div>
-    
-    <button id="btn-spotify" class="btn-green" onclick="abrirSpotify()">▶️ ESCUCHAR EN TU MÓVIL</button>
-    
-    <button id="btn-hitster" class="btn-blue" onclick="comprarCarta()">¡YO ME LA SÉ! ⚡</button>
+    <div id="setup" class="card">
+        <h2 style="color: #1DB954;">UNIRSE A SALA</h2>
+        <input type="text" id="salaI" placeholder="CÓDIGO DE SALA" style="text-transform: uppercase;">
+        <input type="text" id="nombreI" placeholder="TU NOMBRE / APODO">
+        <button class="btn-green" onclick="unirme()">ENTRAR A JUGAR 🚀</button>
+    </div>
 
-    <div class="card"><div id="status-msg">Conectado</div></div>
-</div>
+    <div id="juego" class="hidden">
+        <div class="card" style="display:flex; flex-direction: column; gap: 10px;">
+            <div style="display:flex; justify-content:space-around; align-items:center;">
+                <div>🪙 <span id="tokensV">--</span></div>
+                <div>🎴 <span id="cartasV">--</span></div>
+                <label class="checkbox-container">
+                    <input type="checkbox" id="check-audio" onchange="toggleAudioLocal()"> 🔊 Audio Spotify
+                </label>
+            </div>
+        </div>
 
-<script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-database-compat.js"></script>
+        <button id="btn-hitster" class="btn-blue hidden" onclick="comprarCarta()">¡YO ME LA SÉ! (3 Tokens) ⚡</button>
 
-<script>
-const firebaseConfig = {
-    apiKey: "AIzaSyA...", // DEJA TU API KEY AQUÍ
-    authDomain: "party-music.firebaseapp.com",
-    databaseURL: "https://party-music-default-rtdb.firebaseio.com",
-    projectId: "party-music"
-};
+        <div class="card">
+            <div id="status-msg" style="font-size: 18px; color: gold; font-weight: bold;">Conectando con la TV...</div>
+        </div>
 
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-
-let miId, salaA, trackActual = null;
-let misT = 0;
-
-// Tomar sala del QR
-window.onload = () => {
-    const params = new URLSearchParams(window.location.search);
-    if(params.get('sala')) document.getElementById('salaI').value = params.get('sala');
-};
-
-function unirme(){
-    salaA = document.getElementById('salaI').value.toUpperCase().trim();
-    const nombre = document.getElementById('nombreI').value.trim();
-    if(!salaA || !nombre) return alert("Faltan datos");
-
-    miId = "p_" + Date.now();
-    db.ref(`salas/${salaA}/jugadores/${miId}`).set({ nombre: nombre, tokens: 3, linea: [2000] });
-
-    document.getElementById('setup').classList.add('hidden');
-    document.getElementById('juego').classList.remove('hidden');
-    escuchar();
-}
-
-function escuchar(){
-    db.ref(`salas/${salaA}/estado_juego`).on('value', snap => {
-        const e = snap.val();
-        if(!e) return;
+        <div id="zona-posicion" class="card hidden"></div>
         
-        if(e.cancion_actual){
-            trackActual = e.cancion_actual.spotifyId;
+        <div id="zona-robo" class="hidden card">
+            <p>¿Quieres robar esta canción?</p>
+            <button class="btn-red" id="btn-intentar-robar" onclick="intentarRobar()">USAR 1 TOKEN PARA ROBAR 🎯</button>
+        </div>
+
+        <div id="zona-voto" class="hidden card">
+            <p>¿El jugador adivinó Artista y Título?</p>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn-green" onclick="votar(true)">SÍ 👍</button>
+                <button class="btn-red" onclick="votar(false)">NO 👎</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-database-compat.js"></script>
+
+    <script>
+        const firebaseConfig = { 
+            apiKey: "AIzaSyA_WChhOabs671aPhX5uhX3FaLnn_YOc0c", 
+            authDomain: "party-music-3faae.firebaseapp.com", 
+            databaseURL: "https://party-music-3faae-default-rtdb.firebaseio.com", 
+            projectId: "party-music-3faae", 
+            storageBucket: "party-music-3faae.firebasestorage.app", 
+            messagingSenderId: "877613370267", 
+            appId: "1:877613370267:web:f096e520df8a350ba86f3e" 
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let miId, misT, miL = [2000], salaA, pend = null, miNombre = "";
+        let audioLocalActivo = false, ultimaCancionId = "";
+
+        window.onload = () => {
+            const params = new URLSearchParams(window.location.search);
+            const salaQR = params.get('sala');
+            if(salaQR) document.getElementById('salaI').value = salaQR.toUpperCase();
+        };
+
+        function toggleAudioLocal() {
+            audioLocalActivo = document.getElementById('check-audio').checked;
+            if (!audioLocalActivo) {
+                document.getElementById('player-local').innerHTML = "";
+            } else {
+                sincronizarAudio(ultimaCancionId);
+            }
         }
 
-        if(e.revelar){
-            document.getElementById('btn-spotify').classList.add('hidden');
-            document.getElementById('btn-hitster').classList.add('hidden');
-        } else {
-            document.getElementById('btn-spotify').classList.remove('hidden');
-            document.getElementById('btn-hitster').classList.remove('hidden');
+        function sincronizarAudio(spotifyId) {
+            ultimaCancionId = spotifyId;
+            if (!audioLocalActivo || !spotifyId) return;
+            // Abrir en la app de Spotify o web si está marcado
+            window.location.href = "spotify:track:" + spotifyId;
         }
-        document.getElementById('status-msg').innerText = e.fase || "Jugando";
-    });
 
-    db.ref(`salas/${salaA}/jugadores/${miId}`).on('value', s => {
-        const d = s.val();
-        if(d){
-            misT = d.tokens || 0;
-            document.getElementById('tokensV').innerText = misT;
-            document.getElementById('cartasV').innerText = (d.linea || []).length - 1;
+        function unirme() {
+            salaA = document.getElementById('salaI').value.toUpperCase().trim();
+            miNombre = document.getElementById('nombreI').value.trim();
+            if(!salaA || !miNombre) return;
+
+            db.ref(`salas/${salaA}/jugadores`).once('value', (snap) => {
+                const jugadores = snap.val() || {};
+                let idExistente = null;
+                for(let id in jugadores) {
+                    if(jugadores[id].nombre.toLowerCase() === miNombre.toLowerCase()) {
+                        idExistente = id; break;
+                    }
+                }
+
+                miId = idExistente || "p_" + Date.now();
+                if(!idExistente) {
+                    db.ref(`salas/${salaA}/jugadores/${miId}`).set({ nombre: miNombre, tokens: 3, linea: [2000] });
+                }
+
+                document.getElementById('setup').classList.add('hidden');
+                document.getElementById('juego').classList.remove('hidden');
+                escuchar();
+            });
         }
-    });
-}
 
-function abrirSpotify(){
-    if(trackActual) window.location.href = "spotify:track:" + trackActual;
-}
+        function escuchar() {
+            db.ref(`salas/${salaA}/estado_juego`).on('value', (snap) => {
+                const e = snap.val(); if(!e) return;
+                
+                const btnH = document.getElementById('btn-hitster');
+                const zPos = document.getElementById('zona-posicion');
+                const zRobo = document.getElementById('zona-robo');
+                const zVoto = document.getElementById('zona-voto');
+                const status = document.getElementById('status-msg');
 
-function comprarCarta(){
-    if(misT < 3) return alert("No tienes tokens");
-    db.ref(`salas/${salaA}/jugadores/${miId}/tokens`).transaction(t => (t || 0) - 3);
-    db.ref(`salas/${salaA}/estado_juego/revelar`).set(true);
-}
-</script>
+                if (e.fase === "JUGANDO" && e.cancion_actual) sincronizarAudio(e.cancion_actual.spotifyId);
+
+                btnH.className = (e.fase === "JUGANDO" && e.turno_de === miId && misT >= 3) ? "btn-blue" : "hidden";
+
+                if(e.fase === "JUGANDO") {
+                    zVoto.classList.add('hidden');
+                    zRobo.classList.add('hidden');
+                    if(e.turno_de === miId) { 
+                        if(e.bloqueado) {
+                            status.innerText = "Respuesta enviada. Espera...";
+                            zPos.classList.add('hidden');
+                        } else {
+                            status.innerText = "⭐ ¡ES TU TURNO!"; 
+                            dibujarL(miL, -1); 
+                        }
+                    } else { 
+                        status.innerText = "Turno de: " + e.nombre_turno; 
+                        zPos.classList.add('hidden'); 
+                    }
+                }
+                
+                if(e.fase === "ESPERA_ROBO") {
+                    zPos.classList.add('hidden');
+                    if(e.turno_de !== miId) { 
+                        status.innerText = "¿QUIERES ROBAR?"; 
+                        zRobo.classList.remove('hidden'); 
+                    } else { status.innerText = "Esperando respuestas..."; }
+                }
+
+                if(e.revelar) {
+                    zRobo.classList.add('hidden');
+                    zPos.classList.add('hidden');
+                    if(pend) { 
+                        miL.push(pend); 
+                        db.ref(`salas/${salaA}/jugadores/${miId}/linea`).set(miL); 
+                        pend = null; 
+                    }
+                    if(e.turno_de !== miId) zVoto.classList.remove('hidden');
+                }
+            });
+
+            db.ref(`salas/${salaA}/jugadores/${miId}`).on('value', s => { 
+                if(s.val()){ 
+                    misT = s.val().tokens; 
+                    miL = s.val().linea || [2000]; 
+                    document.getElementById('tokensV').innerText = misT; 
+                    document.getElementById('cartasV').innerText = miL.length - 1;
+                } 
+            });
+        }
+
+        // TUS FUNCIONES DE LÓGICA ORIGINALES (dibujarL, intentarRobar, colocar, comprarCarta, votar)
+        function dibujarL(linea, bloqIdx) {
+            const cont = document.getElementById('zona-posicion');
+            cont.classList.remove('hidden'); cont.innerHTML = "";
+            let años = [...new Set(linea)].sort((a,b) => a - b);
+            for(let i=0; i <= años.length; i++) {
+                let bloqueado = (i === bloqIdx);
+                let btn = document.createElement("button");
+                btn.className = bloqueado ? "bloqueado" : "btn-grey";
+                btn.innerText = bloqueado ? "OCUPADO" : "COLOCAR AQUÍ";
+                if(!bloqueado) btn.onclick = () => colocar(i, años);
+                cont.appendChild(btn);
+                if(i < años.length) {
+                    let yDiv = document.createElement("div");
+                    yDiv.style.margin = "8px 0";
+                    yDiv.innerHTML = `📅 <strong>${años[i]}</strong>`;
+                    cont.appendChild(yDiv);
+                }
+            }
+        }
+
+        function intentarRobar() {
+            if(misT < 1) return alert("Sin tokens");
+            db.ref(`salas/${salaA}/estado_juego`).once('value', (se) => {
+                const e = se.val();
+                db.ref(`salas/${salaA}/jugadores/${e.turno_de}/linea`).once('value', (sl) => {
+                    dibujarL(sl.val() || [2000], e.posicion_bloqueada);
+                    document.getElementById('zona-robo').classList.add('hidden');
+                    db.ref(`salas/${salaA}/jugadores/${miId}/tokens`).transaction(t => t - 1);
+                });
+            });
+        }
+
+        function colocar(idx, lista) {
+            document.getElementById('zona-posicion').classList.add('hidden');
+            db.ref(`salas/${salaA}/estado_juego`).once('value', (se) => {
+                const e = se.val();
+                const y = e.cancion_actual.y;
+                const min = (idx === 0) ? 0 : lista[idx-1];
+                const max = (idx === lista.length) ? 3000 : lista[idx];
+                if(y > min && y < max) pend = y;
+                if(e.turno_de === miId) {
+                    db.ref(`salas/${salaA}/estado_juego`).update({
+                        posicion_bloqueada: idx,
+                        fase: "ESPERA_ROBO",
+                        bloqueado: true
+                    });
+                }
+            });
+        }
+
+        function comprarCarta() {
+            db.ref(`salas/${salaA}/jugadores/${miId}/tokens`).transaction(t => t - 3);
+            db.ref(`salas/${salaA}/estado_juego/cancion_actual`).once('value', (s) => {
+                miL.push(s.val().y);
+                db.ref(`salas/${salaA}/jugadores/${miId}/linea`).set(miL);
+                db.ref(`salas/${salaA}/estado_juego/revelar`).set(true);
+            });
+        }
+
+        function votar(v) { 
+            db.ref(`salas/${salaA}/estado_juego/votos/${miId}`).set(v); 
+            document.getElementById('zona-voto').classList.add('hidden');
+            document.getElementById('status-msg').innerText = "Voto enviado 👍";
+        }
+    </script>
 </body>
 </html>

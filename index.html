@@ -1,123 +1,190 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<title>TV - Yo me la sé</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yo Me La Sé - TV Mode</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-database-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
 
-<style>
-body { background:#000; color:white; font-family:sans-serif; text-align:center; padding:20px; }
-.card { background:#111; padding:20px; border-radius:20px; margin:10px auto; max-width:500px; }
-button { padding:15px; margin:10px; width:90%; border:none; border-radius:10px; font-size:16px; cursor:pointer; }
-.btn { background:#1DB954; color:white; }
-/* Estilo para que el reproductor no estorbe pero funcione */
-#contenedor-audio { position: absolute; top: -1000px; left: -1000px; }
-</style>
+    <script src="canciones.js"></script>
+
+    <style>
+        body { margin: 0; background: #000; color: white; font-family: 'Inter', sans-serif; height: 100vh; display: flex; flex-direction: column; align-items: center; overflow: hidden; }
+        /* Fondo con carátula de Spotify (opcional, ahora es un contenedor para el iframe) */
+        #sp-player-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; filter: blur(40px) brightness(0.4); transform: scale(1.2); }
+        .main-container { z-index: 10; width: 90%; max-width: 1000px; text-align: center; margin-top: 20px; }
+        .glass-panel { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 40px; padding: 30px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        .sala-tag { background: #1DB954; color: black; font-weight: 900; padding: 5px 20px; border-radius: 50px; display: inline-block; margin-bottom: 10px; font-size: 1.2rem; }
+        .btn-admin { background: #1DB954; color: white; border: none; padding: 12px 25px; border-radius: 12px; font-weight: bold; cursor: pointer; margin: 5px; font-size: 1rem; transition: 0.2s; }
+        .btn-admin:hover { transform: scale(1.05); opacity: 0.9; }
+        #pantalla-carga { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 1000; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+        .loader-spin { font-size: 5rem; animation: rotate 2s linear infinite; }
+        @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        #revelado-datos { display: none; margin-top: 20px; animation: fadeIn 0.8s ease; }
+        .card-jugador { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; padding: 15px; min-width: 120px; transition: 0.3s; text-align: center; }
+        .card-jugador.activo { border-color: #1DB954; background: rgba(29, 185, 84, 0.2); box-shadow: 0 0 20px rgba(29, 185, 84, 0.4); transform: scale(1.1); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
 </head>
-
 <body>
 
-<div id="contenedor-audio"></div>
+    <div id="pantalla-carga">
+        <div class="loader-spin">💿</div>
+        <div id="texto-carga" style="color: #1DB954; font-size: 2rem; font-weight: 900; margin-top: 20px;">Preparando...</div>
+    </div>
 
-<h1>🎧 YO ME LA SÉ - TV</h1>
+    <div id="sp-player-container"></div>
 
-<div class="card">
-<h2>Sala: <span id="salaCodigo">----</span></h2>
-<canvas id="qr"></canvas>
-<p>Escanea para unirte</p>
-<p>Código: <strong id="codigoGrande"></strong></p>
-</div>
+    <div class="main-container">
+        <div class="sala-tag">CÓDIGO DE SALA: <span id="display-sala-id">----</span></div>
+        <div class="glass-panel">
+            <h2 id="instruccion">ESCANEEN PARA JUGAR</h2>
+            <div id="qr-container"><canvas id="qr-canvas"></canvas></div>
+            <div id="revelado-datos">
+                <h1 id="display-year" style="font-size: 6rem; margin: 0; color: #FFD700;">----</h1>
+                <h2 id="display-song" style="font-size: 2.5rem; margin: 5px 0;">Título</h2>
+                <h3 id="display-artist" style="opacity: 0.8; font-weight: 400;">Artista</h3>
+            </div>
+            <div style="margin-top:20px;">
+                <button class="btn-admin" onclick="iniciarJuego()">🚀 SIGUIENTE RONDA</button>
+                <button class="btn-admin" style="background:#2196F3;" onclick="revelar()">👁️ REVELAR</button>
+            </div>
+        </div>
+        <div id="contenedor-jugadores" style="display:flex; justify-content:center; gap:15px; flex-wrap:wrap; margin-top:30px;"></div>
+    </div>
 
-<div class="card">
-<button class="btn" onclick="iniciarJuego()">INICIAR</button>
-<button class="btn" onclick="siguienteCancion()">SIGUIENTE CANCIÓN</button>
-<button class="btn" onclick="revelar()">REVELAR</button>
-</div>
+    <script>
+        // --- CONFIGURACIÓN (TUS DATOS DE FIREBASE) ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyA_WChhOabs671aPhX5uhX3FaLnn_YOc0c",
+            authDomain: "party-music-3faae.firebaseapp.com",
+            databaseURL: "https://party-music-3faae-default-rtdb.firebaseio.com",
+            projectId: "party-music-3faae",
+            storageBucket: "party-music-3faae.firebasestorage.app",
+            messagingSenderId: "877613370267",
+            appId: "1:877613370267:web:f096e520df8a350ba86f3e"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
 
-<div class="card">
-<h2 id="info">Esperando jugadores...</h2>
-</div>
+        function genSala(l){ 
+            let r='', c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; 
+            for(let i=0;i<l;i++) r+=c.charAt(Math.floor(Math.random()*c.length)); 
+            return r; 
+        }
+        const urlParams = new URLSearchParams(window.location.search);
+        const salaID = (urlParams.get('s') || genSala(4)).toUpperCase();
+        document.getElementById('display-sala-id').innerText = salaID;
+        db.ref(`salas/${salaID}`).onDisconnect().remove();
 
-<script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-database-compat.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
-<script src="canciones.js"></script>
+        const path = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
+        new QRious({
+            element: document.getElementById('qr-canvas'),
+            value: window.location.origin + path + "mando.html?sala=" + salaID,
+            size: 200, level: 'H'
+        });
 
-<script>
-const firebaseConfig = {
-    apiKey: "AIzaSyA...", // DEJA TU API KEY AQUÍ
-    authDomain: "party-music.firebaseapp.com",
-    databaseURL: "https://party-music-default-rtdb.firebaseio.com",
-    projectId: "party-music"
-};
+        // --- LÓGICA DE JUEGO ---
+        let cancionActualId = "", listaJugadores = [], indexTurno = 0;
+        let cancionesDisponibles = [];
+        const frasesCarga = ["Afinando guitarras...", "Buscando éxitos...", "Limpiando discos...", "Calentando la voz..."];
 
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+        function barajar(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
 
-let sala = generarSala();
-document.getElementById("salaCodigo").innerText = sala;
-document.getElementById("codigoGrande").innerText = sala;
+        function iniciarJuego() {
+            if (listaJugadores.length === 0) return alert("Esperando jugadores...");
+            
+            if (cancionesDisponibles.length === 0) {
+                // Asegúrate de que canciones.js tenga spotifyId
+                cancionesDisponibles = barajar([...CANCIONES]); 
+            }
 
-const base = window.location.origin + window.location.pathname.replace("index.html", "");
-const url = base + "mando.html?sala=" + sala;
+            const pantalla = document.getElementById('pantalla-carga');
+            document.getElementById('texto-carga').innerText = frasesCarga[Math.floor(Math.random() * frasesCarga.length)];
+            pantalla.style.display = 'flex';
 
-QRCode.toCanvas(document.getElementById('qr'), url, err=>{
-    if(err) console.error(err);
-});
+            const rC = cancionesDisponibles.pop(); 
+            const rJ = listaJugadores[indexTurno];
+            indexTurno = (indexTurno + 1) % listaJugadores.length;
 
-let indice = 0;
+            setTimeout(() => {
+                db.ref(`salas/${salaID}/estado_juego`).set({
+                    fase: "JUGANDO",
+                    cancion_actual: { 
+                        spotifyId: rC.spotifyId, // CAMBIADO A SPOTIFY
+                        t: rC.titulo, 
+                        a: rC.artista, 
+                        y: rC.year 
+                    },
+                    turno_de: rJ.id,
+                    nombre_turno: rJ.nombre,
+                    revelar: false,
+                    bloqueado: false
+                });
+                pantalla.style.display = 'none';
+            }, 3000);
+        }
 
-function generarSala(){
-    return Math.random().toString(36).substring(2,6).toUpperCase();
-}
+        function revelar() { 
+            db.ref(`salas/${salaID}/estado_juego/revelar`).set(true); 
+        }
 
-function iniciarJuego(){
-    indice = 0;
-    siguienteCancion();
-}
+        // --- SINCRONIZACIÓN ---
+        db.ref(`salas/${salaID}/jugadores`).on('value', snap => {
+            const container = document.getElementById('contenedor-jugadores');
+            const jugadores = snap.val();
+            container.innerHTML = ""; listaJugadores = [];
+            if(!jugadores) return;
 
-function siguienteCancion(){
-    if(!CANCIONES || CANCIONES.length === 0){
-        alert("No hay canciones cargadas");
-        return;
-    }
-    if(indice >= CANCIONES.length) indice = 0;
+            for (let id in jugadores) {
+                listaJugadores.push({ id, nombre: jugadores[id].nombre });
+            }
 
-    const c = CANCIONES[indice];
+            db.ref(`salas/${salaID}/estado_juego/turno_de`).once('value', tSnap => {
+                const actualID = tSnap.val();
+                container.innerHTML = "";
+                listaJugadores.forEach(j => {
+                    const info = jugadores[j.id];
+                    container.innerHTML += `<div class="card-jugador ${j.id === actualID ? 'activo' : ''}">
+                        <div style="font-size: 1.2rem;">${info.linea ? (info.linea.length - 1) : 0} 🎴</div>
+                        <div style="font-weight:bold;">${info.nombre}</div>
+                        <div style="color: #1DB954;">${info.tokens} 🪙</div>
+                    </div>`;
+                });
+            });
+        });
 
-    // Sincronizamos con Firebase
-    db.ref(`salas/${sala}/estado_juego`).set({
-        fase: "ESCUCHANDO",
-        cancion_actual: {
-            spotifyId: c.spotifyId,
-            y: c.year,
-            t: c.titulo,
-            a: c.artista
-        },
-        revelar: false
-    });
-
-    // Cambiamos el audio
-    const audioDiv = document.getElementById("contenedor-audio");
-    audioDiv.innerHTML = `<iframe src="https://open.spotify.com/embed/track/${c.spotifyId}?utm_source=generator&autoplay=1" width="100%" height="80" frameBorder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>`;
-
-    document.getElementById("info").innerText = "🎵 Escuchando...";
-    indice++;
-}
-
-function revelar(){
-    db.ref(`salas/${sala}/estado_juego/revelar`).set(true);
-    const c = CANCIONES[indice - 1];
-    document.getElementById("info").innerText = `${c.titulo} - ${c.artista} (${c.year})`;
-}
-
-// Escuchar si el mando pide revelar
-db.ref(`salas/${sala}/estado_juego/revelar`).on('value', snap => {
-    if(snap.val() === true) {
-        const c = CANCIONES[indice - 1];
-        if(c) document.getElementById("info").innerText = `${c.titulo} - ${c.artista} (${c.year})`;
-    }
-});
-</script>
+        db.ref(`salas/${salaID}/estado_juego`).on('value', snap => {
+            const e = snap.val(); if(!e) return;
+            if(e.fase === 'JUGANDO') {
+                document.getElementById('instruccion').innerText = "🎶 TURNO DE: " + e.nombre_turno;
+                document.getElementById('qr-container').style.display = "none";
+                document.getElementById('revelado-datos').style.display = "none";
+                
+                // CAMBIO A SPOTIFY PLAYER
+                if(cancionActualId !== e.cancion_actual.spotifyId) {
+                    cancionActualId = e.cancion_actual.spotifyId;
+                    const spContainer = document.getElementById('sp-player-container');
+                    spContainer.innerHTML = `<iframe src="https://open.spotify.com/embed/track/${cancionActualId}?utm_source=generator&autoplay=1" width="100%" height="100%" frameBorder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>`;
+                }
+            }
+            if(e.revelar) {
+                document.getElementById('revelado-datos').style.display = "block";
+                document.getElementById('display-year').innerText = e.cancion_actual.y;
+                document.getElementById('display-song').innerText = e.cancion_actual.t;
+                document.getElementById('display-artist').innerText = e.cancion_actual.a;
+            }
+        });
+    </script>
 </body>
 </html>
