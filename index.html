@@ -14,7 +14,6 @@
 
     <style>
         body { margin: 0; background: #000; color: white; font-family: 'Inter', sans-serif; height: 100vh; display: flex; flex-direction: column; align-items: center; overflow: hidden; }
-        /* Fondo con carátula de Spotify (opcional, ahora es un contenedor para el iframe) */
         #sp-player-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; filter: blur(40px) brightness(0.4); transform: scale(1.2); }
         .main-container { z-index: 10; width: 90%; max-width: 1000px; text-align: center; margin-top: 20px; }
         .glass-panel { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 40px; padding: 30px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
@@ -58,7 +57,6 @@
     </div>
 
     <script>
-        // --- CONFIGURACIÓN (TUS DATOS DE FIREBASE) ---
         const firebaseConfig = {
             apiKey: "AIzaSyA_WChhOabs671aPhX5uhX3FaLnn_YOc0c",
             authDomain: "party-music-3faae.firebaseapp.com",
@@ -88,9 +86,7 @@
             size: 200, level: 'H'
         });
 
-        // --- LÓGICA DE JUEGO ---
-        let cancionActualId = "", listaJugadores = [], indexTurno = 0;
-        let cancionesDisponibles = [];
+        let cancionActualId = "", listaJugadores = [], indexTurno = 0, cancionesDisponibles = [];
         const frasesCarga = ["Afinando guitarras...", "Buscando éxitos...", "Limpiando discos...", "Calentando la voz..."];
 
         function barajar(array) {
@@ -103,11 +99,7 @@
 
         function iniciarJuego() {
             if (listaJugadores.length === 0) return alert("Esperando jugadores...");
-            
-            if (cancionesDisponibles.length === 0) {
-                // Asegúrate de que canciones.js tenga spotifyId
-                cancionesDisponibles = barajar([...CANCIONES]); 
-            }
+            if (cancionesDisponibles.length === 0) cancionesDisponibles = barajar([...CANCIONES]);
 
             const pantalla = document.getElementById('pantalla-carga');
             document.getElementById('texto-carga').innerText = frasesCarga[Math.floor(Math.random() * frasesCarga.length)];
@@ -120,35 +112,30 @@
             setTimeout(() => {
                 db.ref(`salas/${salaID}/estado_juego`).set({
                     fase: "JUGANDO",
-                    cancion_actual: { 
-                        spotifyId: rC.spotifyId, // CAMBIADO A SPOTIFY
-                        t: rC.titulo, 
-                        a: rC.artista, 
-                        y: rC.year 
-                    },
+                    cancion_actual: { spotifyId: rC.spotifyId, t: rC.titulo, a: rC.artista, y: rC.year },
                     turno_de: rJ.id,
                     nombre_turno: rJ.nombre,
                     revelar: false,
                     bloqueado: false
                 });
+                
+                // ACTUALIZAR IFRAME SPOTIFY
+                const spContainer = document.getElementById('sp-player-container');
+                spContainer.innerHTML = `<iframe src="https://open.spotify.com/embed/track/${rC.spotifyId}?utm_source=generator&autoplay=1" width="100%" height="100%" frameBorder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>`;
+                
                 pantalla.style.display = 'none';
             }, 3000);
         }
 
-        function revelar() { 
-            db.ref(`salas/${salaID}/estado_juego/revelar`).set(true); 
-        }
+        function revelar() { db.ref(`salas/${salaID}/estado_juego/revelar`).set(true); }
 
-        // --- SINCRONIZACIÓN ---
         db.ref(`salas/${salaID}/jugadores`).on('value', snap => {
-            const container = document.getElementById('contenedor-jugadores');
             const jugadores = snap.val();
+            const container = document.getElementById('contenedor-jugadores');
             container.innerHTML = ""; listaJugadores = [];
             if(!jugadores) return;
 
-            for (let id in jugadores) {
-                listaJugadores.push({ id, nombre: jugadores[id].nombre });
-            }
+            for (let id in jugadores) listaJugadores.push({ id, nombre: jugadores[id].nombre });
 
             db.ref(`salas/${salaID}/estado_juego/turno_de`).once('value', tSnap => {
                 const actualID = tSnap.val();
@@ -170,13 +157,7 @@
                 document.getElementById('instruccion').innerText = "🎶 TURNO DE: " + e.nombre_turno;
                 document.getElementById('qr-container').style.display = "none";
                 document.getElementById('revelado-datos').style.display = "none";
-                
-                // CAMBIO A SPOTIFY PLAYER
-                if(cancionActualId !== e.cancion_actual.spotifyId) {
-                    cancionActualId = e.cancion_actual.spotifyId;
-                    const spContainer = document.getElementById('sp-player-container');
-                    spContainer.innerHTML = `<iframe src="https://open.spotify.com/embed/track/${cancionActualId}?utm_source=generator&autoplay=1" width="100%" height="100%" frameBorder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>`;
-                }
+                cancionActualId = e.cancion_actual.spotifyId;
             }
             if(e.revelar) {
                 document.getElementById('revelado-datos').style.display = "block";
