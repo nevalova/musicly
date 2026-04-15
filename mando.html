@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Mando - Yo me la sé</title>
 <style>
-/* Tu estética original intacta */
 body { background:#121212; color:white; font-family:'Segoe UI', sans-serif; text-align:center; padding:10px; margin:0; }
 .card { background:#1e1e1e; padding:15px; border-radius:15px; margin-bottom:10px; border:1px solid #333; }
 input { padding:12px; width:85%; border-radius:8px; margin-bottom:10px; text-align:center; background:#000; color:white; border:1px solid #1DB954; }
@@ -20,92 +19,94 @@ button { padding:15px; border-radius:50px; border:none; font-weight:bold; width:
 
 <div id="setup" class="card">
 <h2>UNIRSE A SALA</h2>
-<input id="salaI" placeholder="CÓDIGO">
-<input id="nombreI" placeholder="NOMBRE">
-<button class="btn-green" onclick="unirme()">ENTRAR</button>
+<input id="salaI" placeholder="CÓDIGO DE SALA">
+<input id="nombreI" placeholder="TU NOMBRE">
+<button class="btn-green" onclick="unirme()">ENTRAR AL JUEGO</button>
 </div>
 
 <div id="juego" class="hidden">
-<div class="card">🪙 <span id="tokensV">--</span> | 🎴 <span id="cartasV">--</span></div>
+    <div class="card">🪙 <span id="tokensV">--</span> | 🎴 <span id="cartasV">--</span></div>
+    
+    <button id="btn-spotify" class="btn-green" onclick="abrirSpotify()">▶️ ESCUCHAR EN TU MÓVIL</button>
+    
+    <button id="btn-hitster" class="btn-blue" onclick="comprarCarta()">¡YO ME LA SÉ! ⚡</button>
 
-<button id="btn-spotify" class="btn-green hidden" onclick="abrirCancion()">▶️ ESCUCHAR EN SPOTIFY</button>
-<button id="btn-hitster" class="btn-blue hidden" onclick="comprarCarta()">¡YO ME LA SÉ! ⚡</button>
-
-<div class="card"><div id="status-msg">Conectando...</div></div>
-
-<div id="zona-posicion" class="card hidden"></div>
-<div id="zona-robo" class="hidden card"><button class="btn-red" onclick="intentarRobar()">ROBAR 🎯</button></div>
-<div id="zona-voto" class="hidden card">
-    <button class="btn-green" onclick="votar(true)">SÍ 👍</button>
-    <button class="btn-red" onclick="votar(false)">NO 👎</button>
-</div>
+    <div class="card"><div id="status-msg">Conectado</div></div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-database-compat.js"></script>
 
 <script>
-const firebaseConfig = { apiKey: "AIzaSyA...", authDomain: "party-music.firebaseapp.com", databaseURL: "https://party-music-default-rtdb.firebaseio.com", projectId: "party-music" };
+const firebaseConfig = {
+    apiKey: "AIzaSyA...", // DEJA TU API KEY AQUÍ
+    authDomain: "party-music.firebaseapp.com",
+    databaseURL: "https://party-music-default-rtdb.firebaseio.com",
+    projectId: "party-music"
+};
+
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
 let miId, salaA, trackActual = null;
-let misT = 0, miL = [2000];
+let misT = 0;
 
-function abrirCancion(){ if(trackActual) window.location.href = "spotify:track:" + trackActual; }
+// Tomar sala del QR
+window.onload = () => {
+    const params = new URLSearchParams(window.location.search);
+    if(params.get('sala')) document.getElementById('salaI').value = params.get('sala');
+};
 
 function unirme(){
     salaA = document.getElementById('salaI').value.toUpperCase().trim();
     const nombre = document.getElementById('nombreI').value.trim();
-    if(!salaA || !nombre){ alert("Completa los datos"); return; }
+    if(!salaA || !nombre) return alert("Faltan datos");
+
     miId = "p_" + Date.now();
-    db.ref(`salas/${salaA}/jugadores/${miId}`).set({ nombre, tokens: 3, linea: [2000] });
+    db.ref(`salas/${salaA}/jugadores/${miId}`).set({ nombre: nombre, tokens: 3, linea: [2000] });
+
     document.getElementById('setup').classList.add('hidden');
     document.getElementById('juego').classList.remove('hidden');
     escuchar();
 }
 
 function escuchar(){
-    db.ref(`salas/${salaA}/estado_juego`).on('value', snap=>{
+    db.ref(`salas/${salaA}/estado_juego`).on('value', snap => {
         const e = snap.val();
         if(!e) return;
-        if(e.cancion_actual && e.cancion_actual.spotifyId){
+        
+        if(e.cancion_actual){
             trackActual = e.cancion_actual.spotifyId;
-            document.getElementById('btn-spotify').classList.remove('hidden');
-            document.getElementById('btn-hitster').classList.remove('hidden');
         }
+
         if(e.revelar){
             document.getElementById('btn-spotify').classList.add('hidden');
             document.getElementById('btn-hitster').classList.add('hidden');
+        } else {
+            document.getElementById('btn-spotify').classList.remove('hidden');
+            document.getElementById('btn-hitster').classList.remove('hidden');
         }
-        document.getElementById('status-msg').innerText = e.fase || "Esperando...";
+        document.getElementById('status-msg').innerText = e.fase || "Jugando";
     });
 
-    db.ref(`salas/${salaA}/jugadores/${miId}`).on('value', s=>{
-        const data = s.val();
-        if(data){
-            misT = data.tokens || 0;
-            miL = data.linea || [2000];
+    db.ref(`salas/${salaA}/jugadores/${miId}`).on('value', s => {
+        const d = s.val();
+        if(d){
+            misT = d.tokens || 0;
             document.getElementById('tokensV').innerText = misT;
-            document.getElementById('cartasV').innerText = miL.length - 1;
+            document.getElementById('cartasV').innerText = (d.linea || []).length - 1;
         }
     });
+}
+
+function abrirSpotify(){
+    if(trackActual) window.location.href = "spotify:track:" + trackActual;
 }
 
 function comprarCarta(){
     if(misT < 3) return alert("No tienes tokens");
     db.ref(`salas/${salaA}/jugadores/${miId}/tokens`).transaction(t => (t || 0) - 3);
     db.ref(`salas/${salaA}/estado_juego/revelar`).set(true);
-}
-
-function intentarRobar(){
-    if(misT < 1) return alert("No tienes tokens");
-    db.ref(`salas/${salaA}/jugadores/${miId}/tokens`).transaction(t => (t || 0) - 1);
-}
-
-function votar(v){
-    db.ref(`salas/${salaA}/estado_juego/votos/${miId}`).set(v);
-    document.getElementById('status-msg').innerText = "Voto enviado 👍";
 }
 </script>
 </body>

@@ -4,18 +4,20 @@
 <meta charset="UTF-8">
 <title>TV - Yo me la sé</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <style>
-/* Tu estética original */
-body { background:#000; color:white; font-family:sans-serif; text-align:center; padding:20px; margin:0; overflow:hidden; }
-#bg-spotify { position:fixed; top:0; left:0; width:100%; height:100%; z-index:-1; filter:blur(40px) brightness(0.5); transform:scale(1.2); }
-.card { background:rgba(17,17,17,0.9); padding:20px; border-radius:20px; margin:10px auto; max-width:500px; border:1px solid #333; position:relative; z-index:1; }
+body { background:#000; color:white; font-family:sans-serif; text-align:center; padding:20px; }
+.card { background:#111; padding:20px; border-radius:20px; margin:10px auto; max-width:500px; }
 button { padding:15px; margin:10px; width:90%; border:none; border-radius:10px; font-size:16px; cursor:pointer; }
 .btn { background:#1DB954; color:white; }
+/* Estilo para que el reproductor no estorbe pero funcione */
+#contenedor-audio { position: absolute; top: -1000px; left: -1000px; }
 </style>
 </head>
+
 <body>
 
-<div id="bg-spotify"></div>
+<div id="contenedor-audio"></div>
 
 <h1>🎧 YO ME LA SÉ - TV</h1>
 
@@ -42,7 +44,13 @@ button { padding:15px; margin:10px; width:90%; border:none; border-radius:10px; 
 <script src="canciones.js"></script>
 
 <script>
-const firebaseConfig = { apiKey: "AIzaSyA...", authDomain: "party-music.firebaseapp.com", databaseURL: "https://party-music-default-rtdb.firebaseio.com", projectId: "party-music" };
+const firebaseConfig = {
+    apiKey: "AIzaSyA...", // DEJA TU API KEY AQUÍ
+    authDomain: "party-music.firebaseapp.com",
+    databaseURL: "https://party-music-default-rtdb.firebaseio.com",
+    projectId: "party-music"
+};
+
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
@@ -53,27 +61,46 @@ document.getElementById("codigoGrande").innerText = sala;
 const base = window.location.origin + window.location.pathname.replace("index.html", "");
 const url = base + "mando.html?sala=" + sala;
 
-QRCode.toCanvas(document.getElementById('qr'), url, err=>{ if(err) console.error(err); });
+QRCode.toCanvas(document.getElementById('qr'), url, err=>{
+    if(err) console.error(err);
+});
 
 let indice = 0;
 
-function generarSala(){ return Math.random().toString(36).substring(2,6).toUpperCase(); }
+function generarSala(){
+    return Math.random().toString(36).substring(2,6).toUpperCase();
+}
 
-function iniciarJuego(){ indice = 0; siguienteCancion(); }
+function iniciarJuego(){
+    indice = 0;
+    siguienteCancion();
+}
 
 function siguienteCancion(){
-    if(!CANCIONES || CANCIONES.length === 0){ alert("No hay canciones"); return; }
-    if(indice >= CANCIONES.length){ indice = 0; }
+    if(!CANCIONES || CANCIONES.length === 0){
+        alert("No hay canciones cargadas");
+        return;
+    }
+    if(indice >= CANCIONES.length) indice = 0;
+
     const c = CANCIONES[indice];
 
+    // Sincronizamos con Firebase
     db.ref(`salas/${sala}/estado_juego`).set({
-        fase: "JUGANDO",
-        cancion_actual: { spotifyId: c.spotifyId, y: c.year, t: c.titulo, a: c.artista },
+        fase: "ESCUCHANDO",
+        cancion_actual: {
+            spotifyId: c.spotifyId,
+            y: c.year,
+            t: c.titulo,
+            a: c.artista
+        },
         revelar: false
     });
 
-    // Carga el audio en la TV
-    document.getElementById("bg-spotify").innerHTML = `<iframe src="https://open.spotify.com/embed/track/${c.spotifyId}?utm_source=generator&autoplay=1" width="100%" height="100%" frameBorder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>`;
+    // Cambiamos el audio
+    const audioDiv = document.getElementById("contenedor-audio");
+    audioDiv.innerHTML = `<iframe src="https://open.spotify.com/embed/track/${c.spotifyId}?utm_source=generator&autoplay=1" width="100%" height="80" frameBorder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>`;
+
     document.getElementById("info").innerText = "🎵 Escuchando...";
     indice++;
 }
@@ -88,7 +115,7 @@ function revelar(){
 db.ref(`salas/${sala}/estado_juego/revelar`).on('value', snap => {
     if(snap.val() === true) {
         const c = CANCIONES[indice - 1];
-        document.getElementById("info").innerText = `${c.titulo} - ${c.artista} (${c.year})`;
+        if(c) document.getElementById("info").innerText = `${c.titulo} - ${c.artista} (${c.year})`;
     }
 });
 </script>
