@@ -1,188 +1,123 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mando - Yo me la sé</title>
-    <style>
-        body { background: #121212; color: white; font-family: 'Segoe UI', sans-serif; text-align: center; padding: 10px; margin: 0; user-select: none; -webkit-user-select: none; }
-        .card { background: #1e1e1e; padding: 15px; border-radius: 15px; margin-bottom: 10px; border: 1px solid #333; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-        input { padding: 12px; width: 85%; border-radius: 8px; margin-bottom: 10px; text-align: center; font-size: 16px; background: #000; color: white; border: 1px solid #1DB954; }
-        button { padding: 15px; border-radius: 50px; border: none; font-weight: bold; width: 100%; font-size: 14px; text-transform: uppercase; margin: 5px 0; cursor: pointer; transition: 0.2s; }
-        button:active { transform: scale(0.95); }
-        .btn-green { background: #1DB954; color: white; }
-        .btn-red { background: #f44336; color: white; }
-        .btn-blue { background: #2196F3; color: white; border: 2px solid gold; box-shadow: 0 0 10px gold; }
-        .btn-grey { background: #444; color: white; }
-        .bloqueado { background: #b71c1c !important; opacity: 0.5; cursor: not-allowed; }
-        .hidden { display: none !important; }
-        #player-local { position: absolute; top: -9999px; }
-        .checkbox-container { font-size: 14px; color: #1DB954; font-weight: bold; cursor: pointer; }
-        .checkbox-container input { width: auto; margin-right: 10px; }
-        #btn-fix-audio { background: transparent; border: 1px solid #1DB954; color: #1DB954; font-size: 11px; margin-top: 10px; padding: 8px; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mando - Yo me la sé</title>
+
+<style>
+body { background:#121212; color:white; font-family:'Segoe UI', sans-serif; text-align:center; padding:10px; margin:0; }
+.card { background:#1e1e1e; padding:15px; border-radius:15px; margin-bottom:10px; border:1px solid #333; }
+input { padding:12px; width:85%; border-radius:8px; margin-bottom:10px; text-align:center; background:#000; color:white; border:1px solid #1DB954; }
+button { padding:15px; border-radius:50px; border:none; font-weight:bold; width:100%; margin:5px 0; cursor:pointer; }
+.btn-green { background:#1DB954; color:white; }
+.btn-blue { background:#2196F3; border:2px solid gold; color:white; }
+.hidden { display:none !important; }
+</style>
 </head>
+
 <body>
-    <div id="player-local"></div>
-    <div id="setup" class="card">
-        <h2 style="color: #1DB954;">UNIRSE A SALA</h2>
-        <input type="text" id="salaI" placeholder="CÓDIGO DE SALA" style="text-transform: uppercase;">
-        <input type="text" id="nombreI" placeholder="TU NOMBRE / APODO">
-        <button class="btn-green" onclick="unirme()">ENTRAR A JUGAR 🚀</button>
+
+<div id="setup" class="card">
+<h2>UNIRSE A SALA</h2>
+<input id="salaI" placeholder="CÓDIGO DE SALA">
+<input id="nombreI" placeholder="TU NOMBRE">
+<button class="btn-green" onclick="unirme()">ENTRAR AL JUEGO</button>
+</div>
+
+<div id="juego" class="hidden">
+    <div class="card">
+        🪙 TOKENS: <span id="tokensV">--</span> | 🎴 CARTAS: <span id="cartasV">--</span>
     </div>
 
-    <div id="juego" class="hidden">
-        <div class="card" style="display:flex; flex-direction: column; gap: 10px;">
-            <div style="display:flex; justify-content:space-around; align-items:center;">
-                <div>🪙 <span id="tokensV">--</span></div>
-                <div>🎴 <span id="cartasV">--</span></div>
-                <label class="checkbox-container">
-                    <input type="checkbox" id="check-audio" onchange="toggleAudioLocal()"> 🔊 Audio
-                </label>
-            </div>
-            <button id="btn-fix-audio" class="hidden" onclick="forzarAudioIOS()">¿NO SUENA? TOCA AQUÍ 🔊</button>
-        </div>
-        <button id="btn-hitster" class="btn-blue hidden" onclick="comprarCarta()">¡YO ME LA SÉ! (3 Tokens) ⚡</button>
-        <div class="card"><div id="status-msg" style="font-size: 18px; color: gold; font-weight: bold;">Conectando...</div></div>
-        <div id="zona-posicion" class="card hidden"></div>
-        <div id="zona-robo" class="hidden card">
-            <p>¿Quieres robar esta canción?</p>
-            <button class="btn-red" id="btn-intentar-robar" onclick="intentarRobar()">USAR 1 TOKEN PARA ROBAR 🎯</button>
-        </div>
-        <div id="zona-voto" class="hidden card">
-            <p>¿El jugador adivinó Artista y Título?</p>
-            <div style="display: flex; gap: 10px;">
-                <button class="btn-green" onclick="votar(true)">SÍ 👍</button>
-                <button class="btn-red" onclick="votar(false)">NO 👎</button>
-            </div>
-        </div>
+    <button id="btn-hitster" class="btn-blue" onclick="comprarCarta()">¡YO ME LA SÉ! (COSTO 🪙2)</button>
+
+    <div class="card">
+        <div id="status-msg">Conectado a la TV</div>
     </div>
+</div>
 
-    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-database-compat.js"></script>
-    <script src="https://www.youtube.com/iframe_api"></script>
+<script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-database-compat.js"></script>
 
-    <script>
-        const firebaseConfig = { 
-            apiKey: "AIzaSyA_WChhOabs671aPhX5uhX3FaLnn_YOc0c", 
-            authDomain: "party-music-3faae.firebaseapp.com", 
-            databaseURL: "https://party-music-3faae-default-rtdb.firebaseio.com", 
-            projectId: "party-music-3faae", 
-            appId: "1:877613370267:web:f096e520df8a350ba86f3e" 
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
+<script>
+// [BLOQUE: CONFIGURACIÓN]
+const firebaseConfig = {
+    apiKey: "AIzaSyA...", // Usa tu API Key real
+    authDomain: "party-music.firebaseapp.com",
+    databaseURL: "https://party-music-default-rtdb.firebaseio.com",
+    projectId: "party-music"
+};
 
-        let miId, misT, miL = [2000], salaA, pend = null, miNombre = "", localPlayer, audioLocalActivo = false, ultimaCancionId = "";
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
-        window.onload = () => {
-            const params = new URLSearchParams(window.location.search);
-            if(params.get('sala')) document.getElementById('salaI').value = params.get('sala').toUpperCase();
-        };
+let miId, salaA, misT = 0;
 
-        function onYouTubeIframeAPIReady() {
-            localPlayer = new YT.Player('player-local', { height: '0', width: '0', videoId: '', playerVars: { 'autoplay': 1, 'controls': 0, 'playsinline': 1 } });
+// [BLOQUE: AUTO-RELLENO DE SALA]
+window.onload = () => {
+    const params = new URLSearchParams(window.location.search);
+    if(params.get('sala')) document.getElementById('salaI').value = params.get('sala');
+};
+
+// [BLOQUE: ENTRADA A SALA]
+function unirme(){
+    salaA = document.getElementById('salaI').value.toUpperCase().trim();
+    const nombre = document.getElementById('nombreI').value.trim();
+
+    if(!salaA || !nombre) return alert("Faltan datos para entrar");
+
+    miId = "p_" + Date.now();
+    const refJugador = db.ref(`salas/${salaA}/jugadores/${miId}`);
+
+    // Configuración inicial pedida: 2 tokens y línea base
+    refJugador.set({
+        nombre: nombre,
+        tokens: 2,
+        linea: [2000]
+    });
+
+    // Limpieza automática al desconectar
+    refJugador.onDisconnect().remove();
+
+    document.getElementById('setup').classList.add('hidden');
+    document.getElementById('juego').classList.remove('hidden');
+
+    escucharCambios();
+}
+
+// [BLOQUE: SINCRONIZACIÓN]
+function escucharCambios(){
+    // Escuchar estado global de la TV
+    db.ref(`salas/${salaA}/estado_juego`).on('value', snap => {
+        const e = snap.val();
+        if(!e) return;
+        document.getElementById('status-msg').innerText = e.revelar ? "Revelado en TV" : "Escuchando...";
+    });
+
+    // Escuchar datos propios (Tokens y Cartas)
+    db.ref(`salas/${salaA}/jugadores/${miId}`).on('value', s => {
+        const d = s.val();
+        if(d){
+            misT = d.tokens || 0;
+            document.getElementById('tokensV').innerText = misT;
+            // Calculamos cartas restando el "2000" inicial
+            document.getElementById('cartasV').innerText = (d.linea || []).length - 1;
         }
+    });
+}
 
-        function toggleAudioLocal() {
-            audioLocalActivo = document.getElementById('check-audio').checked;
-            document.getElementById('btn-fix-audio').classList.toggle('hidden', !audioLocalActivo);
-            if (!audioLocalActivo && localPlayer) localPlayer.stopVideo();
-            sincronizarAudio(ultimaCancionId);
-        }
+// [BLOQUE: ACCIÓN DE JUEGO]
+function comprarCarta(){
+    if(misT < 2) return alert("No tienes tokens suficientes (necesitas 2)");
 
-        function forzarAudioIOS() { if (localPlayer && ultimaCancionId) localPlayer.loadVideoById({ videoId: ultimaCancionId, startSeconds: 30 }); }
+    // Restamos los 2 tokens pedidos
+    db.ref(`salas/${salaA}/jugadores/${miId}/tokens`).transaction(t => (t || 0) - 2);
 
-        function sincronizarAudio(idYT) {
-            if (!audioLocalActivo || !localPlayer || !idYT) return;
-            if (idYT !== ultimaCancionId) {
-                ultimaCancionId = idYT;
-                localPlayer.loadVideoById({ videoId: idYT, startSeconds: 30, suggestedQuality: 'small' });
-            }
-        }
+    // Mandamos señal a la TV para revelar
+    db.ref(`salas/${salaA}/estado_juego/revelar`).set(true);
+}
+</script>
 
-        function unirme() {
-            salaA = document.getElementById('salaI').value.toUpperCase().trim();
-            miNombre = document.getElementById('nombreI').value.trim();
-            if(!salaA || !miNombre) return;
-            db.ref(`salas/${salaA}/jugadores`).once('value', (snap) => {
-                const jugadores = snap.val() || {};
-                miId = Object.keys(jugadores).find(id => jugadores[id].nombre.toLowerCase() === miNombre.toLowerCase()) || "p_" + Date.now();
-                if(!jugadores[miId]) db.ref(`salas/${salaA}/jugadores/${miId}`).set({ nombre: miNombre, tokens: 3, linea: [2000] });
-                document.getElementById('setup').classList.add('hidden');
-                document.getElementById('juego').classList.remove('hidden');
-                escuchar();
-            });
-        }
-
-        function escuchar() {
-            db.ref(`salas/${salaA}/estado_juego`).on('value', (snap) => {
-                const e = snap.val(); if(!e) return;
-                if (e.fase === "JUGANDO" && e.cancion_actual) sincronizarAudio(e.cancion_actual.idYT);
-                document.getElementById('btn-hitster').className = (e.fase === "JUGANDO" && e.turno_de === miId && misT >= 3) ? "btn-blue" : "hidden";
-                const status = document.getElementById('status-msg');
-                const zPos = document.getElementById('zona-posicion');
-                const zRobo = document.getElementById('zona-robo');
-                const zVoto = document.getElementById('zona-voto');
-
-                if(e.fase === "JUGANDO") {
-                    zVoto.classList.add('hidden'); zRobo.classList.add('hidden');
-                    if(e.turno_de === miId) { status.innerText = e.bloqueado ? "Respuesta enviada..." : "⭐ ¡ES TU TURNO!"; if(!e.bloqueado) dibujarL(miL, -1); else zPos.classList.add('hidden'); }
-                    else { status.innerText = "Turno de: " + e.nombre_turno; zPos.classList.add('hidden'); }
-                }
-                if(e.fase === "ESPERA_ROBO") { zPos.classList.add('hidden'); if(e.turno_de !== miId) { status.innerText = "¿QUIERES ROBAR?"; zRobo.classList.remove('hidden'); } else status.innerText = "Esperando..."; }
-                if(e.revelar) { zRobo.classList.add('hidden'); zPos.classList.add('hidden'); if(localPlayer) localPlayer.stopVideo(); if(pend) { miL.push(pend); db.ref(`salas/${salaA}/jugadores/${miId}/linea`).set(miL); pend = null; } if(e.turno_de !== miId) zVoto.classList.remove('hidden'); }
-            });
-            db.ref(`salas/${salaA}/jugadores/${miId}`).on('value', s => { if(s.val()){ misT = s.val().tokens; miL = s.val().linea || [2000]; document.getElementById('tokensV').innerText = misT; document.getElementById('cartasV').innerText = miL.length - 1; } });
-        }
-
-        function dibujarL(linea, bloqIdx) {
-            const cont = document.getElementById('zona-posicion');
-            cont.classList.remove('hidden'); cont.innerHTML = "";
-            let años = [...new Set(linea)].sort((a,b) => a - b);
-            for(let i=0; i <= años.length; i++) {
-                let btn = document.createElement("button");
-                btn.className = (i === bloqIdx) ? "bloqueado" : "btn-grey";
-                btn.innerText = (i === bloqIdx) ? "OCUPADO" : "COLOCAR AQUÍ";
-                if(i !== bloqIdx) btn.onclick = () => colocar(i, años);
-                cont.appendChild(btn);
-                if(i < años.length) { let yDiv = document.createElement("div"); yDiv.style.margin = "8px 0"; yDiv.innerHTML = `📅 <strong>${años[i]}</strong>`; cont.appendChild(yDiv); }
-            }
-        }
-
-        function intentarRobar() {
-            if(misT < 1) return alert("Sin tokens");
-            db.ref(`salas/${salaA}/estado_juego`).once('value', (se) => {
-                const e = se.val();
-                db.ref(`salas/${salaA}/jugadores/${miId}/tokens`).transaction(t => (t > 0) ? t - 1 : t, (err, comm) => {
-                    if(comm) {
-                        db.ref(`salas/${salaA}/jugadores/${e.turno_de}/linea`).once('value', sl => { dibujarL(sl.val() || [2000], e.posicion_bloqueada); document.getElementById('zona-robo').classList.add('hidden'); });
-                    }
-                });
-            });
-        }
-
-        function colocar(idx, lista) {
-            document.getElementById('zona-posicion').classList.add('hidden');
-            db.ref(`salas/${salaA}/estado_juego`).once('value', (se) => {
-                const e = se.val(), y = e.cancion_actual.y, min = (idx === 0) ? 0 : lista[idx-1], max = (idx === lista.length) ? 3000 : lista[idx];
-                if(y > min && y < max) pend = y;
-                if(e.turno_de === miId) db.ref(`salas/${salaA}/estado_juego`).update({ posicion_bloqueada: idx, fase: "ESPERA_ROBO", bloqueado: true });
-            });
-        }
-
-        function comprarCarta() {
-            db.ref(`salas/${salaA}/jugadores/${miId}/tokens`).transaction(t => (t >= 3) ? t - 3 : t, (err, comm) => {
-                if(comm) {
-                    db.ref(`salas/${salaA}/estado_juego/cancion_actual`).once('value', s => {
-                        miL.push(s.val().y); db.ref(`salas/${salaA}/jugadores/${miId}/linea`).set(miL);
-                        db.ref(`salas/${salaA}/estado_juego/revelar`).set(true);
-                    });
-                }
-            });
-        }
-
-        function votar(v) { db.ref(`salas/${salaA}/estado_juego/votos/${miId}`).set(v); document.getElementById('zona-voto').classList.add('hidden'); }
-    </script>
 </body>
 </html>

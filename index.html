@@ -1,200 +1,152 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Yo Me La Sé - TV Mode</title>
-    
-    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-database-compat.js"></script>
-    <script src="https://www.youtube.com/iframe_api"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+<meta charset="UTF-8">
+<title>TV - Yo me la sé</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <style>
-        body { margin: 0; background: #000; color: white; font-family: 'Inter', sans-serif; height: 100vh; display: flex; flex-direction: column; align-items: center; overflow: hidden; }
-        #yt-player-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; filter: blur(45px) brightness(0.3); transform: scale(1.3); }
-        .main-container { z-index: 10; width: 90%; max-width: 1000px; text-align: center; margin-top: 20px; }
-        .glass-panel { background: rgba(255, 255, 255, 0.08); backdrop-filter: blur(25px); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 40px; padding: 30px; box-shadow: 0 25px 60px rgba(0,0,0,0.6); }
-        .sala-tag { background: #1DB954; color: black; font-weight: 900; padding: 8px 25px; border-radius: 50px; display: inline-block; margin-bottom: 15px; font-size: 1.3rem; letter-spacing: 1px; }
-        .btn-admin { background: #1DB954; color: white; border: none; padding: 15px 30px; border-radius: 15px; font-weight: bold; cursor: pointer; margin: 8px; font-size: 1.1rem; transition: all 0.2s ease; box-shadow: 0 4px 15px rgba(29, 185, 84, 0.3); }
-        .btn-admin:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(29, 185, 84, 0.5); }
-        #pantalla-carga { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 1000; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
-        .loader-spin { font-size: 6rem; animation: pulse 1.5s infinite ease-in-out; }
-        @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: 0.7; } 100% { transform: scale(1); opacity: 1; } }
-        #revelado-datos { display: none; margin-top: 20px; animation: slideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); }
-        .card-jugador { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 25px; padding: 20px; min-width: 140px; transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); text-align: center; }
-        .card-jugador.activo { border-color: #1DB954; background: rgba(29, 185, 84, 0.15); transform: scale(1.15); box-shadow: 0 10px 30px rgba(29, 185, 84, 0.3); }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
-    </style>
+<style>
+body { background:#000; color:white; font-family:sans-serif; text-align:center; padding:20px; margin:0; overflow:hidden; }
+
+/* [BLOQUE: ESTILO VISUAL] Fondo con efecto Blur de Spotify */
+#spotify-bg-container { 
+    position:fixed; top:0; left:0; width:100%; height:100%; z-index:-1; 
+    filter:blur(40px) brightness(0.6); transform:scale(1.3); opacity: 0.8;
+}
+
+.card { background:rgba(17,17,17,0.85); padding:20px; border-radius:20px; margin:10px auto; max-width:500px; border:1px solid #333; backdrop-filter: blur(10px); }
+button { padding:15px; margin:10px; width:90%; border:none; border-radius:10px; font-size:16px; font-weight:bold; cursor:pointer; }
+.btn { background:#1DB954; color:white; }
+.player-tag { background:#333; padding:5px 10px; border-radius:10px; margin:5px; display:inline-block; font-size:14px; }
+</style>
 </head>
+
 <body>
 
-    <div id="pantalla-carga">
-        <div class="loader-spin">🎵</div>
-        <div id="texto-carga" style="color: #1DB954; font-size: 2.2rem; font-weight: 900; margin-top: 30px; text-transform: uppercase;">Sincronizando...</div>
-    </div>
+<div id="spotify-bg-container">
+    <div id="embed-spotify-bg"></div>
+</div>
 
-    <div id="yt-player-container"><div id="player"></div></div>
+<h1>🎧 YO ME LA SÉ - TV</h1>
 
-    <div class="main-container">
-        <div class="sala-tag">SALA: <span id="display-sala-id">----</span></div>
-        <div class="glass-panel">
-            <h2 id="instruccion" style="letter-spacing: 2px;">ESCANEA PARA CONECTAR EL MANDO</h2>
-            <div id="qr-container"><canvas id="qr-canvas"></canvas></div>
-            <div id="revelado-datos">
-                <h1 id="display-year" style="font-size: 7rem; margin: 0; color: #FFD700; text-shadow: 0 0 30px rgba(255,215,0,0.4);">----</h1>
-                <h2 id="display-song" style="font-size: 2.8rem; margin: 10px 0; font-weight: 900;">Título</h2>
-                <h3 id="display-artist" style="opacity: 0.7; font-size: 1.5rem; font-weight: 400; text-transform: uppercase; letter-spacing: 3px;">Artista</h3>
-            </div>
-            <div style="margin-top:30px;">
-                <button class="btn-admin" onclick="iniciarJuego()">🎮 SIGUIENTE CANCIÓN</button>
-                <button class="btn-admin" style="background:#2196F3;" onclick="revelar()">👁️ REVELAR AHORA</button>
-            </div>
-        </div>
-        <div id="contenedor-jugadores" style="display:flex; justify-content:center; gap:20px; flex-wrap:wrap; margin-top:40px;"></div>
-    </div>
+<div class="card" id="contenedor-qr">
+<h2>Sala: <span id="salaCodigo">----</span></h2>
+<canvas id="qr"></canvas>
+<p>Código: <strong id="codigoGrande"></strong></p>
+<p style="color: gold;">🎯 GANA EL PRIMERO CON 5 CANCIONES</p>
+</div>
 
-    <script>
-        // LISTA DE CANCIONES SEGURAS (No bloqueadas)
-        const listaPrueba = [
-            { youtubeId: "Lhc9v_qR_vU", titulo: "The Lazy Song", artista: "Bruno Mars", year: 2010 },
-            { youtubeId: "09R8_2nJtjg", titulo: "Sugar", artista: "Maroon 5", year: 2014 },
-            { youtubeId: "fWNaR-rxAic", titulo: "Cali", artista: "El Dandee", year: 2012 },
-            { youtubeId: "YQHsXMglC9A", titulo: "Hello", artista: "Adele", year: 2015 },
-            { youtubeId: "60ItHLz5WEA", titulo: "Faded", artista: "Alan Walker", year: 2015 },
-            { youtubeId: "JGwWNGJdvx8", titulo: "Shape of You", artista: "Ed Sheeran", year: 2017 },
-            { youtubeId: "lp-EO5I6OHQ", titulo: "In the End", artista: "Linkin Park", year: 2001 },
-            { youtubeId: "I_izvAbhExY", titulo: "Symphony", artista: "Clean Bandit", year: 2017 },
-            { youtubeId: "kOkQ4T5WO9E", titulo: "This Is What You Came For", artista: "Calvin Harris", year: 2016 },
-            { youtubeId: "OPf0YbXqDm0", titulo: "Uptown Funk", artista: "Mark Ronson", year: 2014 }
-        ];
+<div id="lista-jugadores" style="margin-bottom:20px;"></div>
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyA_WChhOabs671aPhX5uhX3FaLnn_YOc0c",
-            authDomain: "party-music-3faae.firebaseapp.com",
-            databaseURL: "https://party-music-3faae-default-rtdb.firebaseio.com",
-            projectId: "party-music-3faae",
-            appId: "1:877613370267:web:f096e520df8a350ba86f3e"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
+<div class="card">
+<button class="btn" onclick="iniciarJuego()">INICIAR</button>
+<button class="btn" onclick="siguienteCancion()">SIGUIENTE CANCIÓN</button>
+<button class="btn" onclick="revelar()">REVELAR</button>
+</div>
 
-        function genSala(l){ 
-            let r='', c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; 
-            for(let i=0;i<l;i++) r+=c.charAt(Math.floor(Math.random()*c.length)); 
-            return r; 
-        }
+<div class="card">
+<h2 id="info">Esperando jugadores...</h2>
+<div id="detalles-revelados" style="font-size: 1.2rem; margin-top: 10px; color: #1DB954;"></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-database-compat.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+
+<script src="canciones.js"></script>
+
+<script>
+// [BLOQUE: CONFIGURACIÓN]
+const firebaseConfig = {
+    apiKey: "AIzaSyA...", // Mantén tu API Key real aquí
+    authDomain: "party-music.firebaseapp.com",
+    databaseURL: "https://party-music-default-rtdb.firebaseio.com",
+    projectId: "party-music"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+let sala = generarSala();
+document.getElementById("salaCodigo").innerText = sala;
+document.getElementById("codigoGrande").innerText = sala;
+
+const base = window.location.origin + window.location.pathname.replace("index.html", "");
+const url = base + "mando.html?sala=" + sala;
+
+QRCode.toCanvas(document.getElementById('qr'), url, err=>{
+    if(err) console.error(err);
+});
+
+let indice = 0;
+const VICTORIA_LIMITE = 5;
+
+function generarSala(){
+    return Math.random().toString(36).substring(2,6).toUpperCase();
+}
+
+// [BLOQUE: ESCUCHA DE JUGADORES] Actualiza la lista y revisa victoria
+db.ref(`salas/${sala}/jugadores`).on('value', snap => {
+    const p = snap.val();
+    const div = document.getElementById('lista-jugadores');
+    div.innerHTML = "";
+    if(p) Object.values(p).forEach(j => {
+        const cartas = (j.linea || []).length - 1;
+        div.innerHTML += `<span class="player-tag">👤 ${j.nombre} | 🪙 ${j.tokens} | 🎴 ${cartas}/${VICTORIA_LIMITE}</span>`;
         
-        const urlParams = new URLSearchParams(window.location.search);
-        const salaID = (urlParams.get('s') || genSala(4)).toUpperCase();
-        document.getElementById('display-sala-id').innerText = salaID;
-        db.ref(`salas/${salaID}`).onDisconnect().remove();
+        if(cartas >= VICTORIA_LIMITE) {
+            document.getElementById("info").innerText = "🏆 ¡GANÓ " + j.nombre.toUpperCase() + "!";
+        }
+    });
+});
 
-        const path = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
-        new QRious({
-            element: document.getElementById('qr-canvas'),
-            value: window.location.origin + path + "mando.html?sala=" + salaID,
-            size: 220, level: 'H', background: 'transparent', foreground: 'white'
-        });
-
-        let player, cancionActualId = "", listaJugadores = [], indexTurno = 0, cancionesDisponibles = [];
-        const frasesCarga = ["LIMPIANDO EL VINILO...", "SUBIENDO EL VOLUMEN...", "CALENTANDO MOTORES...", "BUSCANDO EL HIT..."];
-
-        function onYouTubeIframeAPIReady() {
-            player = new YT.Player('player', { 
-                height: '100%', width: '100%', 
-                playerVars: { 'autoplay': 1, 'controls': 0, 'modestbranding': 1, 'rel': 0, 'enablejsapi': 1 },
-                events: {
-                    'onReady': (event) => event.target.setVolume(100),
-                    'onStateChange': (event) => {
-                        if (event.data === YT.PlayerState.CUED) event.target.playVideo();
-                    },
-                    'onError': (e) => {
-                        console.log("Error en video, saltando...", e.data);
-                        setTimeout(() => iniciarJuego(), 1000);
-                    }
-                }
+// 🎮 INICIAR: Ahora pone 2 tokens al empezar
+function iniciarJuego(){
+    indice = 0;
+    db.ref(`salas/${sala}/jugadores`).once('value', snap => {
+        const jugadores = snap.val();
+        if(jugadores) {
+            Object.keys(jugadores).forEach(id => {
+                db.ref(`salas/${sala}/jugadores/${id}/tokens`).set(2);
+                db.ref(`salas/${sala}/jugadores/${id}/linea`).set([2000]);
             });
         }
+    });
+    siguienteCancion();
+}
 
-        function iniciarJuego() {
-            if (listaJugadores.length === 0) return alert("¡Necesitas al menos un jugador conectado!");
-            
-            // SISTEMA ANTI-REPETICIÓN: Si se acaban, se vuelve a barajar todo el mazo
-            if (cancionesDisponibles.length === 0) {
-                console.log("Mazo vacío. Barajando canciones...");
-                cancionesDisponibles = [...listaPrueba].sort(() => Math.random() - 0.5);
-            }
+// 🎵 SIGUIENTE CANCIÓN: Carga el Spotify Iframe
+function siguienteCancion(){
+    if(!CANCIONES || CANCIONES.length === 0) return;
+    if(indice >= 20) indice = 0; // Límite de 20 canciones
 
-            const pantalla = document.getElementById('pantalla-carga');
-            pantalla.style.display = 'flex';
-            document.getElementById('texto-carga').innerText = frasesCarga[Math.floor(Math.random() * frasesCarga.length)];
+    const c = CANCIONES[indice];
 
-            // Sacamos la última canción (pop) para que no se repita
-            const rC = cancionesDisponibles.pop(); 
-            const rJ = listaJugadores[indexTurno];
-            indexTurno = (indexTurno + 1) % listaJugadores.length;
+    db.ref(`salas/${sala}/estado_juego`).set({
+        fase: "JUGANDO",
+        cancion_actual: { spotifyId: c.spotifyId, y: c.year, t: c.titulo, a: c.artista },
+        revelar: false
+    });
 
-            setTimeout(() => {
-                db.ref(`salas/${salaID}/estado_juego`).set({
-                    fase: "JUGANDO",
-                    cancion_actual: { idYT: rC.youtubeId, t: rC.titulo, a: rC.artista, y: rC.year },
-                    turno_de: rJ.id, nombre_turno: rJ.nombre, revelar: false, bloqueado: false
-                });
+    // Inyecta el reproductor en el fondo con Blur
+    const spContainer = document.getElementById('embed-spotify-bg');
+    spContainer.innerHTML = `<iframe src="https://open.spotify.com/embed/track/${c.spotifyId}?utm_source=generator&autoplay=1" width="100%" height="380" frameBorder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>`;
 
-                if(player && player.loadVideoById) {
-                    player.loadVideoById({
-                        videoId: rC.youtubeId,
-                        startSeconds: 30 // INICIO EN 30 SEGUNDOS
-                    });
-                }
-                pantalla.style.display = 'none';
-            }, 2500);
-        }
+    document.getElementById("info").innerText = "🎵 Escuchando...";
+    document.getElementById("detalles-revelados").innerText = "";
+    document.getElementById("contenedor-qr").style.opacity = "0.2";
+    indice++;
+}
 
-        function revelar() { db.ref(`salas/${salaID}/estado_juego/revelar`).set(true); }
-
-        db.ref(`salas/${salaID}/jugadores`).on('value', snap => {
-            const container = document.getElementById('contenedor-jugadores');
-            const jugadores = snap.val();
-            if(!jugadores) return;
-            
-            listaJugadores = Object.keys(jugadores).map(id => ({ id, nombre: jugadores[id].nombre }));
-            
-            db.ref(`salas/${salaID}/estado_juego/turno_de`).once('value', tSnap => {
-                const actualID = tSnap.val();
-                container.innerHTML = listaJugadores.map(j => `
-                    <div class="card-jugador ${j.id === actualID ? 'activo' : ''}">
-                        <div style="font-size: 1.4rem; margin-bottom:5px;">${jugadores[j.id].linea ? (jugadores[j.id].linea.length - 1) : 0} 🎴</div>
-                        <div style="font-weight:900; text-transform:uppercase; font-size:0.9rem;">${jugadores[j.id].nombre}</div>
-                        <div style="color: #1DB954; font-weight:bold; margin-top:5px;">${jugadores[j.id].tokens} 🪙</div>
-                    </div>`).join('');
-            });
-        });
-
-        db.ref(`salas/${salaID}/estado_juego`).on('value', snap => {
-            const e = snap.val(); if(!e) return;
-            if(e.fase === 'JUGANDO') {
-                document.getElementById('instruccion').innerText = "🎶 TURNO ACTUAL: " + e.nombre_turno.toUpperCase();
-                document.getElementById('qr-container').style.display = "none";
-                document.getElementById('revelado-datos').style.display = "none";
-                
-                if(cancionActualId !== e.cancion_actual.idYT) {
-                    cancionActualId = e.cancion_actual.idYT;
-                    if(player && player.loadVideoById) {
-                        player.loadVideoById({ videoId: cancionActualId, startSeconds: 30 });
-                    }
-                }
-            }
-            if(e.revelar) {
-                document.getElementById('revelado-datos').style.display = "block";
-                document.getElementById('display-year').innerText = e.cancion_actual.y;
-                document.getElementById('display-song').innerText = e.cancion_actual.t;
-                document.getElementById('display-artist').innerText = e.cancion_actual.a;
-                if(player) player.pauseVideo();
-            }
-        });
-    </script>
+// 🔥 REVELAR
+function revelar(){
+    db.ref(`salas/${sala}/estado_juego/revelar`).set(true);
+    const c = CANCIONES[indice - 1];
+    document.getElementById("info").innerText = "¡RESPUESTA REVELADA!";
+    document.getElementById("detalles-revelados").innerText = `${c.titulo} - ${c.artista} (${c.year})`;
+    document.getElementById("contenedor-qr").style.opacity = "1";
+}
+</script>
 </body>
 </html>
