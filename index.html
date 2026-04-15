@@ -82,6 +82,13 @@ QRCode.toCanvas(document.getElementById('qr'), url, err=>{
 let indice = 0;
 const VICTORIA_LIMITE = 5;
 
+// Este bloque escucha cuando un mando ordena revelar
+db.ref(`salas/${sala}/estado_juego/revelar`).on('value', snap => {
+    if(snap.val() === true) {
+        revelar(); // Llama a la función que muestra los datos en pantalla
+    }
+});
+
 function generarSala(){
     return Math.random().toString(36).substring(2,6).toUpperCase();
 }

@@ -109,13 +109,17 @@ function escucharCambios(){
 
 // [BLOQUE: ACCIÓN DE JUEGO]
 function comprarCarta(){
-    if(misT < 2) return alert("No tienes tokens suficientes (necesitas 2)");
+    if(misT < 2) return alert("Necesitas 2 tokens para revelar");
 
-    // Restamos los 2 tokens pedidos
+    // 1. Restamos los tokens al jugador
     db.ref(`salas/${salaA}/jugadores/${miId}/tokens`).transaction(t => (t || 0) - 2);
 
-    // Mandamos señal a la TV para revelar
+    // 2. Mandamos la señal de revelar a la TV
+    // Usamos .set(true) para que el listener de la TV lo detecte
     db.ref(`salas/${salaA}/estado_juego/revelar`).set(true);
+    
+    // 3. (Opcional) Avisamos al mando que la orden se envió
+    document.getElementById('status-msg').innerText = "¡Revelando en la TV! 🎯";
 }
 </script>
 
