@@ -151,6 +151,7 @@
                     localStorage.setItem('hitster_nombre', miNombre);
                     document.getElementById('setup').classList.add('hidden');
                     document.getElementById('juego').classList.remove('hidden');
+                    document.getElementById('status-msg').innerText = "Esperando se inicie la partida...";
                     escuchar();
                 });
             } catch (e) {
@@ -233,6 +234,14 @@
                     setEleccion("Elección actual: " + e.seleccion_turno.label);
                 } else {
                     setEleccion("");
+                }
+
+                if (e.fase === "ESPERA") {
+                    status.innerText = "Esperando se inicie la partida...";
+                    zonaPos.classList.add('hidden');
+                    zonaRobo.classList.add('hidden');
+                    zonaVoto.classList.add('hidden');
+                    return;
                 }
 
                 if (e.fase === "FINAL") {

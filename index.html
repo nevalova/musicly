@@ -177,8 +177,9 @@
             <div style="width: 100%; text-align: center;">
                 <div id="contenedor-jugadores"></div>
                 <div style="display: flex; justify-content: center;">
-                    <button class="btn-admin" onclick="iniciarJuego()">▶️ SIGUIENTE</button>
-                    <button class="btn-admin" style="background:#2196F3;" onclick="revelar()">👁️ REVELAR</button>
+                    <button id="btn-iniciar-partida" class="btn-admin" onclick="iniciarPartida()">▶️ INICIAR PARTIDA</button>
+                    <button id="btn-siguiente-cancion" class="btn-admin" onclick="iniciarJuego()" style="display:none;">▶️ SIGUIENTE CANCIÓN</button>
+                    <button id="btn-revelar" class="btn-admin" style="background:#2196F3; display:none;" onclick="revelar()">👁️ REVELAR</button>
                 </div>
             </div>
         </div>
@@ -255,6 +256,17 @@
                 uri: 'spotify:track:4uLU6hMCxmIqC3pqr0nu9I'
             }, (c) => { embedController = c; });
         };
+
+        function mostrarControlesJuego(activo) {
+            document.getElementById('btn-iniciar-partida').style.display = activo ? "none" : "inline-block";
+            document.getElementById('btn-siguiente-cancion').style.display = activo ? "inline-block" : "none";
+            document.getElementById('btn-revelar').style.display = activo ? "inline-block" : "none";
+        }
+
+        function iniciarPartida() {
+            mostrarControlesJuego(true);
+            iniciarJuego();
+        }
 
         async function iniciarJuego() {
             if (listaJugadores.length === 0) return alert("Esperando jugadores...");
@@ -381,11 +393,13 @@
             const revelado = document.getElementById('revelado-datos');
 
             if (e.fase === "ESPERA") {
+                mostrarControlesJuego(false);
                 qr.style.display = "block";
                 juego.style.display = "none";
                 return;
             }
 
+            mostrarControlesJuego(true);
             qr.style.display = "none";
             juego.style.display = "block";
             turno.style.display = "block";
