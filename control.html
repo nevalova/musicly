@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Control - El Nerdgasmo Games</title>
+    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-database-compat.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            margin: 0; background: linear-gradient(135deg, #2D004B 0%, #7B4B9E 100%);
+            background-attachment: fixed; color: white; font-family: 'Inter', sans-serif; 
+            display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 10px;
+        }
+        .glass-ui {
+            background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 24px; padding: 16px;
+            width: 100%; max-width: 400px; box-sizing: border-box; text-align: center;
+        }
+        input {
+            width: 100%; padding: 12px; border-radius: 13px; border: 1px solid rgba(255,255,255,0.2);
+            margin-bottom: 12px; font-size: 0.95rem; text-align: center; outline: none;
+            background: rgba(0,0,0,0.3); color: white; box-sizing: border-box;
+        }
+        button { 
+            padding: 14px; border-radius: 16px; border: none; font-weight: 900; 
+            width: 100%; font-size: 0.9rem; text-transform: uppercase; margin: 6px 0; 
+            cursor: pointer; transition: transform 0.1s; 
+        }
+        button:active { transform: scale(0.96); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        
+        .btn-green { background: #1DB954; color: white; }
+        .btn-blue { background: #2196F3; color: white; border: 2px solid #FFD700; box-shadow: 0 0 15px rgba(33, 150, 243, 0.5); }
+        .btn-grey { background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); }
+        .btn-red { background: #f44336; color: white; }
+        
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; width: 100%; max-width: 400px; }
+        .stat-card { background: rgba(0,0,0,0.2); padding: 8px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); text-align: center; }
+        .stat-val { font-size: 1.2rem; font-weight: 900; color: #1DB954; }
+        
+        .bloqueado { background: #b71c1c !important; opacity: 0.4; pointer-events: none; }
+        .hidden { display: none !important; }
+        .btn-salir { background: none; color: rgba(255,255,255,0.4); text-decoration: underline; font-size: 0.8rem; margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+    <div id="setup" class="glass-ui">
+        <h2 style="font-weight: 900; margin-top: 0; margin-bottom: 12px; font-size: 1.45rem;">YO ME LA SÉ</h2>
+        <input type="text" id="salaI" placeholder="CÓDIGO DE SALA" style="text-transform: uppercase;">
+        <input type="text" id="nombreI" placeholder="TU NOMBRE">
+        <button class="btn-green" onclick="unirme()">ENTRAR A JUGAR 🚀</button>
+        <p id="error-msg" style="color: #FF5252; font-size: 0.9rem; margin-top: 10px; font-weight: 700;"></p>
+    </div>
+
+    <div id="juego" class="hidden" style="width: 100%; max-width: 400px;">
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div style="font-size: 0.8rem; opacity: 0.6;">TOKENS</div>
+                <div class="stat-val">🪙 <span id="tokensV">--</span></div>
+            </div>
+            <div class="stat-card">
+                <div style="font-size: 0.8rem; opacity: 0.6;">CARTAS</div>
+                <div class="stat-val">🎴 <span id="cartasV">--</span></div>
+            </div>
+        </div>
+
+        <button id="btn-hitster" class="btn-blue hidden" onclick="comprarCarta()">✨ CANJEAR 3 TOKENS (CARTA DIRECTA)</button>
+
+        <div class="glass-ui" style="margin-bottom: 10px;">
+            <div id="status-msg" style="font-size: 1rem; color: #FFD700; font-weight: 900;">Conectando...</div>
+            <div id="eleccionV" class="hidden" style="margin-top:8px; font-size:0.92rem; font-weight:900; color:#fff;"></div>
+        </div>
+
+        <div id="zona-posicion" class="glass-ui hidden" style="margin-bottom: 15px;"></div>
+        <div id="zona-robo" class="hidden glass-ui"><button class="btn-red" onclick="intentarRobar()">🎯 USAR 1 TOKEN PARA ROBAR</button></div>
+        
+        <div id="zona-voto" class="hidden glass-ui">
+            <p>¿Adivinó Artista y Título?</p>
+            <div style="flex-direction: row; display: flex; gap: 10px;">
+                <button class="btn-green" onclick="votar(true)">SÍ 👍</button>
+                <button class="btn-red" onclick="votar(false)">NO 👎</button>
+            </div>
+        </div>
+        <button class="btn-salir" onclick="salirDeSala()">Abandonar Sala / Cambiar Nombre</button>
+    </div>
+
+    <script>
+
+        const firebaseConfig = { 
+            apiKey: "AIzaSyA_WChhOabs671aPhX5uhX3FaLnn_YOc0c", 
+            authDomain: "party-music-3faae.firebaseapp.com", 
+            databaseURL: "https://party-music-3faae-default-rtdb.firebaseio.com", 
+            projectId: "party-music-3faae" 
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        const DECADAS_INICIALES = [1950, 1960, 1970, 1980, 1990, 2000, 2010, 2020];
+        function randomDecadaInicial(){
+            return DECADAS_INICIALES[Math.floor(Math.random() * DECADAS_INICIALES.length)];
+        }
+
+        let miId, misT = 0, miL = [], salaA, procesandoCompra = false, rondaActual = null, modoSeleccion = "turno";
+
+        window.onload = () => {
+            const params = new URLSearchParams(window.location.search);
+            if(params.get('sala')) document.getElementById('salaI').value = params.get('sala').toUpperCase();
+            if(localStorage.getItem('hitster_nombre')) document.getElementById('nombreI').value = localStorage.getItem('hitster_nombre');
+        };
+
+        async function unirme() {
+            salaA = document.getElementById('salaI').value.toUpperCase().trim();
+            const miNombre = document.getElementById('nombreI').value.trim();
+            if(!salaA || !miNombre) return;
+
+            const errorMsg = document.getElementById('error-msg');
+            errorMsg.innerText = "Conectando...";
+
+            try {
+                const snap = await db.ref(`salas/${salaA}`).get();
+                if(!snap.exists()) { 
+                    errorMsg.innerText = "La sala " + salaA + " no existe aún."; 
+                    return; 
+                }
+
+                db.ref(`salas/${salaA}/jugadores`).once('value', (snapJugadores) => {
+                    const jugadores = snapJugadores.val() || {};
+                    let idEx = null;
+                    for(let id in jugadores) {
+                        if((jugadores[id].nombre || "").toLowerCase() === miNombre.toLowerCase()) {
+                            idEx = id;
+                            break;
+                        }
+                    }
+
+                    miId = idEx || "p_" + Date.now();
+
+                    if(!idEx) {
+                        db.ref(`salas/${salaA}/jugadores/${miId}`).set({
+                            nombre: miNombre,
+                            tokens: 3,
+                            linea: [randomDecadaInicial()]
+                        });
+                    }
+
+                    localStorage.setItem('hitster_nombre', miNombre);
+                    document.getElementById('setup').classList.add('hidden');
+                    document.getElementById('juego').classList.remove('hidden');
+                    escuchar();
+                });
+            } catch (e) {
+                errorMsg.innerText = "Error de conexión con Firebase.";
+            }
+        }
+
+        function construirLineaVisual(linea) {
+            const años = [...(linea || [])].map(v => Number(v)).filter(v => !Number.isNaN(v)).sort((a, b) => a - b);
+            if (!años.length) años.push(randomDecadaInicial());
+
+            const grupos = [];
+            for (const año of años) {
+                const ultimo = grupos[grupos.length - 1];
+                if (ultimo && ultimo.valor === año) ultimo.cuenta += 1;
+                else grupos.push({ valor: año, cuenta: 1 });
+            }
+
+            const slots = grupos.map((g, i) => ({
+                left: i === 0 ? null : grupos[i - 1].valor,
+                right: g.valor,
+                label: i === 0 ? `Antes de ${g.valor}` : `Entre ${grupos[i - 1].valor} y ${g.valor}`
+            }));
+
+            slots.push({
+                left: grupos[grupos.length - 1].valor,
+                right: null,
+                label: `Después de ${grupos[grupos.length - 1].valor}`
+            });
+
+            return { grupos, slots };
+        }
+
+        function colocacionEsValida(year, slot) {
+            if (!slot) return false;
+            if (slot.left === null) return year <= slot.right;
+            if (slot.right === null) return year >= slot.left;
+            return year >= slot.left && year <= slot.right;
+        }
+
+        function setEleccion(texto) {
+            const el = document.getElementById('eleccionV');
+            if (texto) {
+                el.innerText = texto;
+                el.classList.remove('hidden');
+            } else {
+                el.innerText = "";
+                el.classList.add('hidden');
+            }
+        }
+
+        function escuchar() {
+            db.ref(`salas/${salaA}/estado_juego`).on('value', (snap) => {
+                const e = snap.val(); if(!e) return;
+                const status = document.getElementById('status-msg');
+                const btnH = document.getElementById('btn-hitster');
+                const zonaPos = document.getElementById('zona-posicion');
+                const zonaRobo = document.getElementById('zona-robo');
+                const zonaVoto = document.getElementById('zona-voto');
+                const miRobo = e.robos && e.robos[miId] ? e.robos[miId] : null;
+
+                if (rondaActual !== e.ronda_id) {
+                    rondaActual = e.ronda_id || null;
+                    modoSeleccion = "turno";
+                    procesandoCompra = false;
+                    btnH.disabled = false;
+                    zonaPos.classList.add('hidden');
+                }
+
+                btnH.className = (e.fase === "JUGANDO" && e.turno_de === miId && misT >= 3 && !e.revelar) ? "btn-blue" : "hidden";
+                zonaVoto.classList.add('hidden');
+                zonaRobo.classList.add('hidden');
+
+                if (e.seleccion_turno && e.seleccion_turno.label) {
+                    setEleccion("Elección actual: " + e.seleccion_turno.label);
+                } else {
+                    setEleccion("");
+                }
+
+                if (e.fase === "FINAL") {
+                    status.innerText = e.ganador ? `Ganó ${e.ganador}` : "Partida terminada";
+                    zonaPos.classList.add('hidden');
+                    zonaRobo.classList.add('hidden');
+                    return;
+                }
+
+                if(e.fase === "JUGANDO") {
+                    if(e.turno_de === miId) {
+                        if(e.bloqueado) {
+                            status.innerText = e.seleccion_turno?.label ? "Tu elección: " + e.seleccion_turno.label : "¡Predicción enviada!";
+                            zonaPos.classList.add('hidden');
+                        } else {
+                            status.innerText = "⭐ TU TURNO";
+                            modoSeleccion = "turno";
+                            dibujarL(miL, { modo: "turno" });
+                        }
+                    } else {
+                        status.innerText = "Turno de: " + (e.nombre_turno || "");
+                        zonaPos.classList.add('hidden');
+                    }
+                }
+
+                if(e.fase === "ESPERA_ROBO") {
+                    if(e.turno_de === miId) {
+                        status.innerText = e.seleccion_turno?.label ? "Tu elección: " + e.seleccion_turno.label : "Esperando...";
+                        zonaPos.classList.add('hidden');
+                    } else {
+                        if (miRobo && miRobo.label) {
+                            status.innerText = "Tu robo: " + miRobo.label;
+                            zonaPos.classList.add('hidden');
+                        } else if (miRobo && miRobo.pagado) {
+                            status.innerText = "Elige dónde robar";
+                            modoSeleccion = "robo";
+                            db.ref(`salas/${salaA}/jugadores/${e.turno_de}/linea`).once('value', (sl) => {
+                                dibujarL(sl.val() || [], { modo: "robo", bloqueadoIdx: e.seleccion_turno?.idx });
+                            });
+                        } else if (misT >= 1) {
+                            status.innerText = e.seleccion_turno?.label ? "¿Robas? Eligió " + e.seleccion_turno.label : "¿Robas?";
+                            zonaRobo.classList.remove('hidden');
+                            zonaPos.classList.add('hidden');
+                        } else {
+                            status.innerText = "Sin tokens para robar";
+                            zonaPos.classList.add('hidden');
+                        }
+                    }
+                }
+
+                if(e.revelar) {
+                    procesandoCompra = false;
+                    btnH.disabled = false;
+                    zonaRobo.classList.add('hidden');
+                    zonaPos.classList.add('hidden');
+                    if(e.turno_de !== miId && (e.votos?.[miId] === undefined)) zonaVoto.classList.remove('hidden');
+                    if (e.resumen_resultado) status.innerText = e.resumen_resultado;
+                }
+            });
+
+            db.ref(`salas/${salaA}/jugadores/${miId}`).on('value', s => {
+                if(s.val()){
+                    misT = Number(s.val().tokens) || 0;
+                    miL = s.val().linea || [];
+                    document.getElementById('tokensV').innerText = misT;
+                    document.getElementById('cartasV').innerText = miL.length;
+                }
+            });
+        }
+
+        async function comprarCarta() {
+            if (procesandoCompra || misT < 3) return;
+            procesandoCompra = true;
+            document.getElementById('btn-hitster').disabled = true;
+
+            const estadoSnap = await db.ref(`salas/${salaA}/estado_juego`).get();
+            const e = estadoSnap.val();
+            if (!e || !e.cancion_actual) {
+                procesandoCompra = false;
+                document.getElementById('btn-hitster').disabled = false;
+                return;
+            }
+
+            const nuevaLinea = [...miL, Number(e.cancion_actual.y)].sort((a,b) => a-b);
+            const updates = {
+                [`salas/${salaA}/jugadores/${miId}/tokens`]: Math.max(0, misT - 3),
+                [`salas/${salaA}/jugadores/${miId}/linea`]: nuevaLinea,
+                [`salas/${salaA}/estado_juego/revelar`]: true,
+                [`salas/${salaA}/estado_juego/fase`]: nuevaLinea.length >= 3 ? "FINAL" : "REVELADO",
+                [`salas/${salaA}/estado_juego/seleccion_turno`]: { label: "¡CANJEADO!", canjeado: true },
+                [`salas/${salaA}/estado_juego/resumen_resultado`]: "Carta para: " + ((document.getElementById('nombreI').value || "Jugador") + " (canjeada)"),
+                [`salas/${salaA}/estado_juego/resumen_votos`]: "",
+                [`salas/${salaA}/estado_juego/ganador`]: nuevaLinea.length >= 3 ? (document.getElementById('nombreI').value || "Jugador") : ""
+            };
+            await db.ref().update(updates);
+        }
+
+        function dibujarL(linea, opciones = {}) {
+            const cont = document.getElementById('zona-posicion');
+            cont.classList.remove('hidden');
+            cont.innerHTML = "";
+
+            const { grupos, slots } = construirLineaVisual(linea);
+
+            slots.forEach((slot, i) => {
+                const btn = document.createElement("button");
+                btn.className = "btn-grey";
+                btn.innerText = "COLOCAR " + slot.label;
+                if (opciones.modo === "robo" && i === opciones.bloqueadoIdx) {
+                    btn.disabled = true;
+                    btn.classList.add("bloqueado");
+                    btn.innerText = "OCUPADO POR EL TURNO";
+                } else {
+                    btn.onclick = () => colocar(slot, i, opciones.modo || "turno");
+                }
+                cont.appendChild(btn);
+
+                if (i < grupos.length) {
+                    const wrap = document.createElement("div");
+                    wrap.style.display = "flex";
+                    wrap.style.flexWrap = "wrap";
+                    wrap.style.justifyContent = "center";
+                    wrap.style.gap = "6px";
+                    wrap.style.margin = "8px 0";
+
+                    for (let n = 0; n < grupos[i].cuenta; n++) {
+                        const yDiv = document.createElement("div");
+                        yDiv.style.fontWeight = "900";
+                        yDiv.style.color = "#FFD700";
+                        yDiv.style.fontSize = "0.95rem";
+                        yDiv.innerHTML = `📅 ${grupos[i].valor}`;
+                        wrap.appendChild(yDiv);
+                    }
+
+                    cont.appendChild(wrap);
+                }
+            });
+        }
+
+        function colocar(slot, idx, modo = "turno") {
+            db.ref(`salas/${salaA}/estado_juego`).once('value', (se) => {
+                const e = se.val();
+                if (!e) return;
+
+                if (modo === "robo") {
+                    if (idx === e.seleccion_turno?.idx) return;
+                    db.ref(`salas/${salaA}/estado_juego/robos/${miId}`).update({
+                        idx: idx,
+                        label: slot.label,
+                        slot: slot
+                    });
+                    setEleccion("Tu robo: " + slot.label);
+                    document.getElementById('status-msg').innerText = "Tu robo: " + slot.label;
+                    document.getElementById('zona-posicion').classList.add('hidden');
+                } else {
+                    db.ref(`salas/${salaA}/estado_juego`).update({
+                        seleccion_turno: { label: slot.label, idx: idx, slot: slot },
+                        posicion_bloqueada: idx,
+                        fase: "ESPERA_ROBO",
+                        bloqueado: true
+                    });
+                    setEleccion("Tu elección: " + slot.label);
+                }
+            });
+        }
+
+        function intentarRobar() {
+            if(misT < 1) return;
+
+            db.ref(`salas/${salaA}/estado_juego`).once('value', (se) => {
+                const e = se.val();
+                if (!e || e.turno_de === miId) return;
+                if (e.robos && e.robos[miId]) return;
+
+                db.ref(`salas/${salaA}/estado_juego/robos/${miId}`).transaction((actual) => {
+                    if (actual) return;
+                    return { pagado: true, ronda_id: e.ronda_id };
+                }, (error, committed) => {
+                    if (error || !committed) return;
+                    db.ref(`salas/${salaA}/jugadores/${miId}/tokens`).transaction(t => {
+                        const n = Number(t) || 0;
+                        if (n < 1) return t;
+                        return n - 1;
+                    });
+                    modoSeleccion = "robo";
+                    db.ref(`salas/${salaA}/jugadores/${e.turno_de}/linea`).once('value', (sl) => {
+                        dibujarL(sl.val() || [], { modo: "robo", bloqueadoIdx: e.seleccion_turno?.idx });
+                    });
+                    document.getElementById('zona-robo').classList.add('hidden');
+                    document.getElementById('status-msg').innerText = "Elige dónde robar";
+                });
+            });
+        }
+
+        function votar(v) {
+            db.ref(`salas/${salaA}/estado_juego/votos/${miId}`).set(v);
+            document.getElementById('zona-voto').classList.add('hidden');
+        }
+
+        function salirDeSala() {
+            if(confirm("¿Salir?")) {
+                localStorage.removeItem('hitster_nombre');
+                window.location.href = window.location.pathname;
+            }
+        }
+
+    </script>
+</body>
+</html>
