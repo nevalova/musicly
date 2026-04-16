@@ -70,7 +70,7 @@
         <button id="btn-hitster" class="btn-blue hidden" onclick="comprarCarta()">✨ CANJEAR 3 TOKENS (CARTA DIRECTA)</button>
 
         <div class="glass-ui" style="margin-bottom: 10px;">
-            <div id="status-msg" style="font-size: 1rem; color: #FFD700; font-weight: 900;">Conectando...</div>
+            <div id="status-msg" style="font-size: 1rem; color: #FFD700; font-weight: 900;">Esperando se inicie la partida...</div>
             <div id="eleccionV" class="hidden" style="margin-top:8px; font-size:0.92rem; font-weight:900; color:#fff;"></div>
         </div>
 
@@ -117,7 +117,7 @@
             if(!salaA || !miNombre) return;
 
             const errorMsg = document.getElementById('error-msg');
-            errorMsg.innerText = "Conectando...";
+            errorMsg.innerText = "Esperando se inicie la partida...";
 
             try {
                 const snap = await db.ref(`salas/${salaA}`).get();
@@ -240,7 +240,6 @@
                     status.innerText = "Esperando se inicie la partida...";
                     zonaPos.classList.add('hidden');
                     zonaRobo.classList.add('hidden');
-                    zonaVoto.classList.add('hidden');
                     return;
                 }
 

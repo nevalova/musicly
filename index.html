@@ -178,7 +178,7 @@
                 <div id="contenedor-jugadores"></div>
                 <div style="display: flex; justify-content: center;">
                     <button id="btn-iniciar-partida" class="btn-admin" onclick="iniciarPartida()">▶️ INICIAR PARTIDA</button>
-                    <button id="btn-siguiente-cancion" class="btn-admin" onclick="iniciarJuego()" style="display:none;">▶️ SIGUIENTE CANCIÓN</button>
+                    <button id="btn-siguiente-cancion" class="btn-admin" style="display:none;" onclick="iniciarJuego()">▶️ SIGUIENTE CANCIÓN</button>
                     <button id="btn-revelar" class="btn-admin" style="background:#2196F3; display:none;" onclick="revelar()">👁️ REVELAR</button>
                 </div>
             </div>
@@ -257,15 +257,72 @@
             }, (c) => { embedController = c; });
         };
 
-        function mostrarControlesJuego(activo) {
-            document.getElementById('btn-iniciar-partida').style.display = activo ? "none" : "inline-block";
-            document.getElementById('btn-siguiente-cancion').style.display = activo ? "inline-block" : "none";
-            document.getElementById('btn-revelar').style.display = activo ? "inline-block" : "none";
+
+        function actualizarBotonesAdmin(fase) {
+            const btnIniciar = document.getElementById('btn-iniciar-partida');
+            const btnSiguiente = document.getElementById('btn-siguiente-cancion');
+            const btnRevelar = document.getElementById('btn-revelar');
+            if (fase === "ESPERA") {
+                btnIniciar.style.display = "inline-block";
+                btnSiguiente.style.display = "none";
+                btnRevelar.style.display = "none";
+            } else {
+                btnIniciar.style.display = "none";
+                btnSiguiente.style.display = "inline-block";
+                btnRevelar.style.display = "inline-block";
+            }
         }
 
         function iniciarPartida() {
-            mostrarControlesJuego(true);
             iniciarJuego();
+        }
+
+        async function procesarVotacionSiLista() {
+            const salaRef = db.ref(`salas/${salaID}`);
+            const salaSnap = await salaRef.get();
+            const sala = salaSnap.val() || {};
+            const e = sala.estado_juego || {};
+            const players = sala.jugadores || {};
+
+            if (!e.revelar || e.fase !== "REVELADO" || e.votacion_resuelta) return;
+
+            const idsElegibles = Object.keys(players).filter(id => id !== e.turno_de);
+            const votos = e.votos || {};
+            const votosEmitidos = idsElegibles.filter(id => votos[id] !== undefined);
+
+            if (idsElegibles.length === 0) {
+                await salaRef.update({
+                    estado_juego: {
+                        ...e,
+                        votacion_resuelta: true,
+                        token_otorgado: false,
+                        resumen_votos: "Sin votación en partida solitaria."
+                    }
+                });
+                return;
+            }
+
+            if (votosEmitidos.length < idsElegibles.length) return;
+
+            const votosSi = votosEmitidos.filter(id => votos[id] === true).length;
+            const votosNo = votosEmitidos.filter(id => votos[id] === false).length;
+            const tokenOtorgado = votosSi > votosNo;
+            const updates = {
+                estado_juego: {
+                    ...e,
+                    votacion_resuelta: true,
+                    token_otorgado: tokenOtorgado,
+                    resumen_votos: tokenOtorgado
+                        ? `Votos: ${votosSi} sí / ${votosNo} no · +1 token para ${e.nombre_turno || "jugador"}`
+                        : `Votos: ${votosSi} sí / ${votosNo} no · Sin token`
+                }
+            };
+
+            if (tokenOtorgado && e.turno_de && players[e.turno_de]) {
+                updates[`jugadores/${e.turno_de}/tokens`] = (Number(players[e.turno_de].tokens) || 0) + 1;
+            }
+
+            await salaRef.update(updates);
         }
 
         async function iniciarJuego() {
@@ -304,7 +361,9 @@
                     votos: {},
                     resumen_votos: "",
                     resumen_resultado: "",
-                    ganador: ""
+                    ganador: "",
+                    votacion_resuelta: false,
+                    token_otorgado: false
                 }
             });
 
@@ -350,9 +409,6 @@
                 updates[`jugadores/${id}/linea`] = linea;
             });
 
-            const votos = e.votos || {};
-            const votosSi = Object.values(votos).filter(v => v === true).length;
-            const votosNo = Object.values(votos).filter(v => v === false).length;
 
             let ganador = "";
             Object.entries(lineas).forEach(([id, linea]) => {
@@ -369,9 +425,11 @@
                 ...e,
                 revelar: true,
                 fase: ganador ? "FINAL" : "REVELADO",
-                resumen_votos: `Votos: ${votosSi} sí / ${votosNo} no`,
+                resumen_votos: Object.keys(players).length > 1 ? "Esperando votos..." : "Sin votación en partida solitaria.",
                 resumen_resultado: resumenResultado,
-                ganador: ganador
+                ganador: ganador,
+                votacion_resuelta: Object.keys(players).length <= 1,
+                token_otorgado: false
             };
 
             await salaRef.update(updates);
@@ -383,6 +441,10 @@
 
         db.ref(`salas/${salaID}/estado_juego`).on('value', snap => {
             const e = snap.val(); if(!e) return;
+            actualizarBotonesAdmin(e.fase);
+            if (e.revelar && e.fase === "REVELADO" && !e.votacion_resuelta) {
+                procesarVotacionSiLista();
+            }
 
             const qr = document.getElementById('qr-completo');
             const juego = document.getElementById('juego-activo');
@@ -393,13 +455,11 @@
             const revelado = document.getElementById('revelado-datos');
 
             if (e.fase === "ESPERA") {
-                mostrarControlesJuego(false);
                 qr.style.display = "block";
                 juego.style.display = "none";
                 return;
             }
 
-            mostrarControlesJuego(true);
             qr.style.display = "none";
             juego.style.display = "block";
             turno.style.display = "block";
