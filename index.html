@@ -201,10 +201,6 @@
         const db = firebase.database();
 
         function genSala(l){ let r='', c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; for(let i=0;i<l;i++) r+=c.charAt(Math.floor(Math.random()*c.length)); return r; }
-        const DECADAS_INICIALES = [1950, 1960, 1970, 1980, 1990, 2000, 2010, 2020];
-        function randomDecadaInicial(){
-            return DECADAS_INICIALES[Math.floor(Math.random() * DECADAS_INICIALES.length)];
-        }
         function normalizarLinea(linea){
             return [...(linea || [])]
                 .map(v => Number(v))
@@ -212,11 +208,17 @@
                 .sort((a,b) => a - b);
         }
         function colocacionEsValida(year, slot) {
-            if (!slot) return false;
-            if (slot.left === null) return year <= slot.right;
-            if (slot.right === null) return year >= slot.left;
-            return year >= slot.left && year <= slot.right;
-        }
+    if (!slot) return false;
+
+    const left = slot.left ?? null;
+    const right = slot.right ?? null;
+
+    if (left == null && right == null) return false;
+    if (left == null) return year <= right;
+    if (right == null) return year >= left;
+    return year >= left && year <= right;
+}
+
         function renderTarjetas(players) {
             const container = document.getElementById('contenedor-jugadores');
             container.innerHTML = "";
@@ -306,7 +308,7 @@
             const sala = salaSnap.val() || {};
             const e = sala.estado_juego || {};
             const players = sala.jugadores || {};
-            if (!e.cancion_actual) return;
+            if (!e.cancion_actual || e.revelar) return;
 
             const year = Number(e.cancion_actual.y);
             const lineas = {};

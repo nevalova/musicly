@@ -99,7 +99,7 @@
         const db = firebase.database();
 
         const DECADAS_INICIALES = [1950, 1960, 1970, 1980, 1990, 2000, 2010, 2020];
-        function randomDecadaInicial(){
+        function randomDecadaInicial() {
             return DECADAS_INICIALES[Math.floor(Math.random() * DECADAS_INICIALES.length)];
         }
 
@@ -144,6 +144,8 @@
                             tokens: 3,
                             linea: [randomDecadaInicial()]
                         });
+                    } else if (!Array.isArray(jugadores[miId].linea) || !jugadores[miId].linea.length) {
+                        db.ref(`salas/${salaA}/jugadores/${miId}/linea`).set([randomDecadaInicial()]);
                     }
 
                     localStorage.setItem('hitster_nombre', miNombre);
@@ -183,11 +185,16 @@
         }
 
         function colocacionEsValida(year, slot) {
-            if (!slot) return false;
-            if (slot.left === null) return year <= slot.right;
-            if (slot.right === null) return year >= slot.left;
-            return year >= slot.left && year <= slot.right;
-        }
+    if (!slot) return false;
+
+    const left = slot.left ?? null;
+    const right = slot.right ?? null;
+
+    if (left == null && right == null) return false;
+    if (left == null) return year <= right;
+    if (right == null) return year >= left;
+    return year >= left && year <= right;
+}
 
         function setEleccion(texto) {
             const el = document.getElementById('eleccionV');
@@ -290,6 +297,7 @@
                 if(s.val()){
                     misT = Number(s.val().tokens) || 0;
                     miL = s.val().linea || [];
+                    if (!miL.length) miL = [randomDecadaInicial()];
                     document.getElementById('tokensV').innerText = misT;
                     document.getElementById('cartasV').innerText = miL.length;
                 }
